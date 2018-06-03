@@ -1,3 +1,5 @@
+package user.domain;
+
 import java.lang.String;
 
 public class User {
