@@ -11,10 +11,7 @@ public class UserDaoTest {
 
     public static void main(String[] args) throws ClassNotFoundException, SQLException{
 
-        //UserDao가 사용할 ConnectionMaker구현 클래스를 결정하고 오브젝트를 만든다.
-        ConnectionMaker connectionMaker = new DConnectionMaker();
-
-        UserDao dao = new UserDao(connectionMaker);
+        UserDao dao = new DaoFactory().userDao();
 
         User user = new User();
         user.setId("leo");
