@@ -26,3 +26,13 @@ DI는 오브젝트 레퍼런스를 외부로부터 제공(주입)받고 이를 �
 ## 1.7.5 메소드를 이용한 의존관계 주입
  * 수정자 메소드를 이용한 주입
  * 일반 메소드를 이용한 주입
+
+ 수정자 메소드 DI를 사요하는 팩토리 메소드
+```java
+    @Bean //오브젝트 생성을 담당하는 IoC용 메소드라는 표시
+    public UserDao userDao(){
+        UserDao userDao = new UserDao();
+        userDao.setConnectionMaker(connectionMaker());
+        return userDao;
+    }
+```
