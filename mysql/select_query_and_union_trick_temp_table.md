@@ -6,7 +6,6 @@
 이런경우 쿼리때만 임시로 쓸 가상 테이블 만들고 싶었고 아래 방법을 사용하였다.
 
 select로 column을 만들고 union으로 row를 만듦
-
 간단한예
 ```mysql
 select * from
