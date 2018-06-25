@@ -12,7 +12,7 @@
 class User {
   private static final int BASIC = 1;
   private static final int SILVER = 2;
-  priavet static final int GOLD = 3;
+  priavte static final int GOLD = 3;
   
   int level;
   
