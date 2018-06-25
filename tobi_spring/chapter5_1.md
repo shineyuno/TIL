@@ -81,5 +81,10 @@ public class UserDaoJdbc implements UserDao {
   ...
 }
 ```
+여기서 눈여겨볼 것은 Level 타입의 level 필드를 사용하는 부분이다. Level 이늄은 오브젝트이므로 
+DB에 저장될수 있는 SQL 타입이 아니다. 따라서 DB에 저장 가능한 정수형 값으로 변환해줘야 한다. 각 Level 이늄의 DB 저장용
+값을 얻기 위해서는 Level에 미리 만들어둔 intValue() 메소드를 사용한다.
 
-
+반대로 조회를 했을 경우, ResultSet에서는 DB의 타입인 int로 level 정보를 가져온다. 이값을 User의 setLevel() 메소드에 
+전달하면 타입이 일치하지 않는다는 에러가 발생할 것이다. 이때는 Level의 스태틱 메소드인 valueOf()를 이용해 int 타입의 값을
+Level 타입의 이늄 오브젝트로 만들어서 setLevel()메소드에 넣어줘야 한다.
