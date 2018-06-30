@@ -179,3 +179,64 @@ private void upgradeLevel(User user) {
   userDao.update(user);
 }
 ```
+upgradeLevel()메소드 코드는 마음에 안든다. 다음 단계가 무엇인가 하는 로직과 그때 사용자 오브젝트의 level 필드를 변경해준다는 
+로직이 함께 있는데다. 너무 노골적으로 드러나 있다.
+
+레벨의 순서와 다음 단계 레벨이 무엇인지를 결정하는 일은  Level에게 맡기자.
+레벨의 순서를 굳이 UserService에 담아둘 이유가 없다.  
+
+업그레이드 순서를 담고 있도록 수정한  Level
+```java
+public enum Level {
+  GOLD(3, null), SILVER(2, GOLD), BASIC(1, SILVER); // 이늄 선언에 DB에 저장할 값과 함께 다음 단계의 레벨 정보도 추가한다.
+  
+  private final int value;
+  private final Level next; // 다음 단계의 레벨 정보를 스스로 갖고 있도록 Level 타입의 next 변수를 추가한다.
+  
+  Level(int value, Level next){
+    thsi.value = value;
+    this.next = next;
+  }
+  
+  public int intValue() {
+    return value;
+  }
+  
+  public Level nextLevel(){
+    return this.next;
+  }
+  
+  public static Level valueOf(int value){
+    switch(value) {
+      case 1: return BASIC;
+      case 2: return SILVER;
+      case 3: return GOLD;
+      default: throw new AssertionError("Unkown value: " + value);
+    }
+  }
+}
+```
+
+User의 레벨 업그레이드 작업용 메소드
+```java
+public void upgradeLevel(){
+  Level nextLevel = this.level.nextLevel();
+  if (nextLevel == null) {
+    throw new illegalStateException(this.level + "은 업그레이드가 불가능합니다");
+  }
+  else {
+    this.level = nextLevel;
+  }
+}
+```
+
+간결해진 upgradeLevel()
+```java
+private void upgradeLevel(User user){
+  user.upradeLevel();
+  userDao.update(user);
+}
+```
+객체지향적인 코드는 다른 오브젝트의 데이터를 가져와서 작업하는 대신 데이터를 갖고 있는 다른 오브젝트에게 작업을 해달라고 요청한다.
+오브젝트에게 데이터를 요구하지 말고 작업을 요청하라는 것이 객체지향 프로그래밍의 가장 기본이 되는 원리이기도 하다.
+항상 코드를 더 깔끔하고 유연하면서 변화에 대응하기 십고 테스트하기 좋게 만들려고 노력해야 함을 기억하자.
