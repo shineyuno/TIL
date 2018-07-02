@@ -58,3 +58,85 @@ JDBC의 트랜잭션은 하나의 Connection을 가져와 사용하다가 닫는
 실행될수 밖에 없다.
 
 어떤 일련의 작업이 하나의 트랜잭션으로 묶이려면 그 작업이 진행되는 동안 DB 커넥션도 하나만 사용돼야 한다.
+
+
+### 비즈니스 로직 내의 트랜잭션 경계설정
+트랜잭션 경계를 upgradeLevels()메소드 안에 두려면 DB 커넥션도 이 메소드 안에서 만들고, 종료시킬 필요가 있다.
+
+Connection을 공유하도록 수정한 UserService 메소드
+```java
+class UserService {
+  public void upgradeLevels() throws Exception {
+    Connection c = ...;
+    ...
+    try{
+        ...
+        upgradeLevel(c, user);
+        ...
+    }
+    ...
+ }
+ 
+ protected void upgradeLevel(Connection c, User user) {
+    user.upgradeLevel();
+    userDao.update(c,user);
+ }
+}
+
+interface UserDao {
+  public update(Connection c, User user);
+  ...
+}
+```
+
+### UserService 트랜잭션 경계설정의 문제점
+첫째는 DB 커넥션을 비롯한 리소스의 깔금한 처리를 가능하게 했던 JdbcTemplate을 더이상 활용할 수 없다는 점
+두번째 문제점은 DAO의 메소드와 비즈니스 로직을 담고 있는 UserService의 메소드에 Connection 파라미터가 추가돼야 한다는 점
+세 번째 문제는 Connection 파라미터가 UserDao 인터페이스 메소드에 추가되면 UserDao는 더 이상 데이터 액세스 기술에 독립적일 수가 없다는 점
+마지막으로 DAO 메소드에 Connection 파라미터를 받게 하면 테스트 코드에도 영향을 미친다.
+
+## 5.2.3 트랜잭션 동기화
+### Connection 파라미터 제거 
+트랜잭션 동기화(transaction synchronization)란 UserService에서 트랜잭션을 시작하기 위해 만든 Connection 오브젝트를 특별한 저장소에
+보관해두고, 이후에 호출되는 DAO의 메소드에서는 저장된 Connection을 가져다 사용하게 하는것
+정확히는DAO가 사용하는 JdbcTemplate이 트랜잭션 동기화 방식을 이용하도록 하는것이다.
+그리고 트랜잭션이 모두 종료되면, 그때는 동기화를 마치면된다.
+
+트랜잭션 동기화 저장소는 작업 스레드마다 독립적으로 Connection 오브젝트를 저장하고 관리하기 때문에 다중 사용자를 처리하는 
+서버의 멀티스레드 환경에서도 충돌이 날 염려는 없다.
+이렇게 트랜잭션 동기화 기법을 사용하면 파라미터를 통해 일일이 Connection 오브젝트를 전달할 필요가 없어 진다.
+
+트랜잭션 동기화 방식을 적용한 UserService
+```java
+private DataSource dataSource;
+
+public void setDataSource(DataSource dataSource){ //Connection을 생성할때 사용할 DataSource를 DI 받도록 한다.
+  this.dataSource = dataSource;
+}
+
+public  void upgradeLevels() throws Exception {
+  TransactionSynchronizationManager.initSynchronization();  //트랜잭션 동기화 관리자를 이용해 동기화 작업을 초기화 한다.
+  Connection c = DataSourceUtils.getConnection(dataSource); //DB커넥션 생성과 동기화를 함께 해주는 유틸리티 메소드 
+                                                            // DB커넥션을 생성하고 트랜잭션을 시작한다. 이후의 DAO작업은 
+  c.setAutoCommit(false);                                   // 모두 여기서 시작한 트랜잭션 안에서 진행한다.
+  
+  try {
+    List<User> users = userDao.getAll();
+    for(User user : users){
+        if(canUpgradeLevel(user)){
+          upgradeLevel(user);
+        }
+    }
+    c.commit(); // 정상적으로 작업을 미치면 트랜잭션 커밋
+  } catch (Exception e) {  
+    c.rollback(); //예외가 발생하면 롤백한다.
+    throw e; 
+  } finally {
+    DataSourceUtils.releaseConnection(c, dataSource);   //스프링 유틸리티 메소드를 이용해 DB 커넥션을 안전하게 닫는다.
+    TransactionSynchronizationManager.unbindResource(this.dataSource);
+    TransactionSynchronizationManager.clearSynchronization(); // 동기화 작업 종료 및 정리
+  }
+}
+```
+트랜잭션 동기화가 되어 있는 채로 JdbcTemplate을 사용하면 JdbcTemplate의 작업에서 동기화시킨 DB 커넥션을 사용하게 된다.
+
