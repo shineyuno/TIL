@@ -1,6 +1,9 @@
 # Embedded Tomcat
 
-Why Embedded Tomcat 8
+![embedded-java-server](images/embedded-java-server-300x229.png)
+
+## Why Embedded Tomcat 8
+
 First of all, let's understand what embedded means. 
 For a long time, Java developers shipped their applications as war (Web ARchive) and ear (Enterprise ARchive) files. 
 These files, after being bundled, were deployed on application servers (like Tomcat, WildFly, WebSphere, etc.) 
