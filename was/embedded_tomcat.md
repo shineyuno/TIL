@@ -15,8 +15,11 @@ That is, they started creating jar (Java ARchive) files that are executable and 
 
 #### What triggered this change is that the new approach has many advantages. For example:
 1.To run a new instance of the application, it is just a matter of executing a single command.
+
 2.All dependencies of the application are declared explicitly in the application code.
+
 3.The responsibility for running the application isn’t spread across different teams.
+
 4.The application is guaranteed to be run in the correct server version, mitigating issues.
 
 Also, as this approach fits perfectly in the microservices architecture 
