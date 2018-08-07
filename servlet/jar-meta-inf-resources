@@ -1,6 +1,6 @@
 # Servlet 3.0으로 정적 컨텐츠 제공
 
-(일명 WEB-INF/lib/{\*.jar}/META-INF/resources )
+일명 WEB-INF/lib/{\*.jar}/META-INF/resources
 
 모듈성은 Java EE 6의 주제 중 하나이며, 서블릿 3.0 조각은 종종 이것의 한 예가됩니다.
 이미지, CSS 또는 JavaScript와 같은 정적 인 내용을 처리하기위한 서블릿 3.0 사양의 작지만 매우 유용한 새 기능에 관한 것입니다.
