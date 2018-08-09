@@ -102,6 +102,7 @@ classes 및 resources 파일들을 '중복없이' 패키징 할 수 있게 해�
 spring.handlers, spring.shcemas 파일로 생성되는 것이다. 
 
  
+ 
  ## 참고
  [Apache Maven Shade Plugin](http://maven.apache.org/plugins/maven-shade-plugin/index.html) </br>
  [Executable JAR](http://maven.apache.org/plugins/maven-shade-plugin/examples/executable-jar.html) </br>
