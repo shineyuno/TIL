@@ -101,4 +101,8 @@ classes 및 resources 파일들을 '중복없이' 패키징 할 수 있게 해�
 마치 'merge' 를 하는것과 같이 각 라이브러리의 핸들러, 스키마 정보들이 각각 하나의 </br> 
 spring.handlers, spring.shcemas 파일로 생성되는 것이다. 
 
-   
+ 
+ ## 참고
+ [Apache Maven Shade Plugin](http://maven.apache.org/plugins/maven-shade-plugin/index.html) </br>
+ [Executable JAR](http://maven.apache.org/plugins/maven-shade-plugin/examples/executable-jar.html) </br>
+[http://asuraiv.blogspot.com/2016/01/maven-shade-plugin-1-resource.html](http://asuraiv.blogspot.com/2016/01/maven-shade-plugin-1-resource.html)
