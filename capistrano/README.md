@@ -19,3 +19,6 @@ task :restart_sidekiq do
 end
 after "deploy:published", "restart_sidekiq"
 ```
+
+## 참고
+ [https://github.com/capistrano/capistrano]
