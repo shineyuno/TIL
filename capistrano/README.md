@@ -74,5 +74,135 @@ Capistrano는 대화 형 이 아닌 SSH 세션을 사용하여 권한이없는 �
 #### Shells
 Capistrano 3는 Bash 나 Sh와 같은 POSIX 쉘을 기대합니다. tcsh, csh와 같은 쉘은 작동하지만 아마 그렇지 않을 것입니다.
 
+## Quick start
+
+### Requirements 요구사항
+
+* 로컬 시스템 (MRI 또는 ​​Rubinius)의 Ruby 버전 2.0 이상
+* 소스 컨트롤 (Git, Mercurial 및 Subversion 지원이 내장되어 있음)을 사용하는 프로젝트
+* 프로젝트를 체크 아웃하는 데 필요한 SCM 바이너리 (예 : git , hg )는 배포하려는 서버에 설치해야합니다.
+*  [Bundler](http://bundler.io) 는 프로젝트 용 Gemfile과 함께 권장됩니다.
+
+
+### Install the Capistrano gem  Capistrano gem 설치하기
+
+`require: false` 사용하여 프로젝트의 Gemfile에 Capistrano를 추가하십시오 :
+
+``` ruby
+group :development do
+  gem "capistrano", "~> 3.11", require: false
+end
+```
+
+그런 다음 Bundler를 실행하여 Capistrano가 다운로드되어 설치되었는지 확인하십시오.
+
+``` sh
+$ bundle install
+```
+
+### "Capify" your project
+
+프로젝트에 "Capfile"또는 "capfile"이 없는지 확인하십시오. 그런 다음 실행 :
+
+``` sh
+$ bundle exec cap install
+```
+
+이것은 Capistrano가 가능한 프로젝트에 필요한 모든 설정 파일과 디렉토리 구조를  `staging` 와 `production` 두 단계로 만듭니다. :
+
+```
+├── Capfile
+├── config
+│   ├── deploy
+│   │   ├── production.rb
+│   │   └── staging.rb
+│   └── deploy.rb
+└── lib
+    └── capistrano
+            └── tasks
+```
+
+생성 된 스테이지를 사용자 정의하려면 다음을 사용하십시오.
+
+``` sh
+$ bundle exec cap install STAGES=local,sandbox,qa,production
+```
+
+Capistrano가 생성하는 파일은 단순히 시작하기위한 템플릿 일뿐입니다. `deploy.rb` 및 stage 파일을 편집하여 프로젝트 및 대상 서버에 적합한 값을 포함하도록하십시오.
+
+### Command-line usage 명령행 사용법
+
+``` sh
+# list all available tasks 사용 가능한 모든 작업 나열
+$ bundle exec cap -T
+
+# deploy to the staging environment 준비 환경에 배포
+$ bundle exec cap staging deploy
+
+# deploy to the production environment 프로덕션 환경에 배포
+$ bundle exec cap production deploy
+
+# simulate deploying to the production environment 프로덕션 환경에 배포 시뮬레이션
+# does not actually do anything 실제로 아무것도하지 않습니다.
+$ bundle exec cap production deploy --dry-run
+
+# list task dependencies 작업 종속성 나열
+$ bundle exec cap production deploy --prereqs
+
+# trace through task invocations  작업 호출을 통한 추적
+$ bundle exec cap production deploy --trace
+
+# lists all config variable before deployment tasks 배포 작업 전에 모든 config 변수를 나열합니다.
+$ bundle exec cap production deploy --print-config-variables
+```
+
+## Finding help and documentation
+
+Capistrano는 여러 개의 GitHub 저장소와 플러그인 커뮤니티를 포괄하는 대규모 프로젝트이며  시작할때 압도적일 수 있습니다. 도움이되는 자료는 다음과 같습니다.
+
+* **[docs](https://github.com/capistrano/capistrano/tree/master/docs) 디렉토리에는 공식 문서가 들어 있으며** [Capistrano website](http://capistranorb.com) 를 생성하는 데 사용됩니다
+
+* [Stack Overflow](http://stackoverflow.com/questions/tagged/capistrano) 에는 많은 활동이있는 Capistrano 태그가 있습니다
+* [The Capistrano mailing list](https://groups.google.com/forum/#!forum/capistrano)는 트래픽이 적지 만 Capistrano 제공자가 모니터링합니다.
+* [CodersClan](http://codersclan.net/?repo_id=325&source=link) 은 Capistrano 전문가들에게 현상금 문제를 해결할 수있는 기회 를 제공합니다.
+
+관련 GitHub 저장소 :
+
+* [capistrano/sshkit](https://github.com/capistrano/sshkit) 은 Capistrano의 근간을 이루는 SSH 동작을 제공합니다 (Capistrano 태스크에서 `execute` 를 사용하면 SSHKit을 사용하고 있습니다)
+* [capistrano/rails](https://github.com/capistrano/rails) 는 Ruby on Rails 배포 작업을 추가하는 매우 인기있는 gem입니다
+* [mattbrictson/airbrussh](https://github.com/mattbrictson/airbrussh) 는 Capistrano의 기본 로그 포맷을 제공합니다.
+
+GitHub issues는 버그 보고서 및 기능 요청에 대한 것입니다. GitHub issues 제출에 대한 지침은 [CONTRIBUTING](https://github.com/capistrano/capistrano/blob/master/CONTRIBUTING.md) 문서를 참조하십시오.
+
+Capistrano의 보안 취약점을 발견했다고 생각되는 경우 GitHub issue를 열지 마십시오. 대신, <security@capistranorb.com> 으로 보고서를 보내주십시오.
+
+## How to contribute
+
+카피스트라노에 대한 기고문은 코드, 문서 또는 아이디어 형태로 기꺼이 받아 들여집니다. [DEVELOPMENT](https://github.com/capistrano/capistrano/blob/master/DEVELOPMENT.md)를 읽고 Capistrano의 코드를 해킹하고, 테스트를 실행하고, 첫 번째 요청을 제출하는 방법을 학습하십시오.
+
+## License
+
+MIT License (MIT)
+
+Copyright (c) 2012-2018 Tom Clements, Lee Hambley
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
 ## 참고
  [https://github.com/capistrano/capistrano]
