@@ -30,3 +30,39 @@ InputStream is = new BufferedInputStream(new FileInputStream("a.txt"));
 - 원격 오브젝트 이용시
 - 타깃에 대한 접근권한 제어
 
+## 6.3.2 다이내믹 프록시
+일일이 프록시 클래스를 정의하지 않고도 몇 가지 API를 이용해 프록시처럼 동작하는 오브젝트를 다이내믹하게 생성하는것
+
+### 프록시의 구성과 프록시 작성의 문제점
+프록시의 역활은 위임과 부가작업이라는 두가지로 구분할수 있다.
+
+프록시를 만들기 번거로운 이유
+- 타깃의 인터페이스를 구현하고 위임하는 코드를 작성하기가 번거롭다. 부가기능이 필요 없는 메소드도 구현해서 타깃으로 위함하는 코드를 일일이 만들어줘야한다.
+- 부가기능 코드가 중복될 가능성이 많다. 트랜잭션은 DB를 사용하는 대부분의 로직에 적용될 필요가 있다.
+
+### 리플렉션
+다이내믹 프록시는 리플렉션 기능을 이용해서 프록시를 만들어준다. 리플렉션은 자바의 코드 자체를 추상화해서 접근하도록 만든것이다.
+
+리플렉션 API 중에서 메소드에 대한 정의를 담은 Method라는 인터페이스에 정의된  invoke()메소드를  이용해 메소드를 호출할수있다.
+
+리플렉션 학습테스트
+```java
+public class ReflectionTest {
+  @Test
+  publick void invokeMethod() throws Exception{
+    String name = "Spring";
+    
+    //length()
+    assertThat(name.length(), is(6));
+    
+    Method lengthMethod = String.class.getMethod("length");
+    assertThat((Intger))lengthMethod.invoke(name), is(6));
+    
+    // charAt()
+    assertThat(name.chartAt(0), is('S'));
+    
+    Method charAtMethod = String.class.getMethod("chartAt", int.class);
+    assertThat((Character)charAtMethod.invoke(name,0), is('S'));
+  }
+}
+```
