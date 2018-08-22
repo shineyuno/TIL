@@ -125,3 +125,6 @@ upstream backend {
     server unix:/var/run/php5-fpm.sock backup;
 }
 ```
+
+## 참고
+[https://opentutorials.org/module/384/4328](https://opentutorials.org/module/384/4328)
