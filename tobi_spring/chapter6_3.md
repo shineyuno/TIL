@@ -66,3 +66,83 @@ public class ReflectionTest {
   }
 }
 ```
+
+### 프록시 클래스
+다이내믹 프록시를 이용한 프록시를 만들어 보자. 
+프록시를 적용할 간단한 타깃 클래스와 인터페이스를 다음과 같다.
+
+Hello 인터페이스
+```java
+interface Hello {
+  String sayHello(String name);
+  String sayHi(String name);
+  String sayThankYou(String name);
+}
+
+```
+
+타깃 클래스
+```java
+public class HelloTarget implements Hello{
+  public String sayHello(String name){
+    return "Hello" + name;
+  }
+  
+  public String sayHi(String name){
+    return "Hi" + name;
+  }
+  
+  public String sayThankYou(String name){
+    return "Thank You" + name;
+  }  
+}
+```
+
+Hello 인터페이스를 구현한 프록시
+데코레이터 패턴을 적용해 타깃인 HelloTarget에 부가기능 추가
+```java
+public class HelloUppercase implements Hello{
+  Hello hello; //위임할 타깃 오브젝트, 여기서는 타깃 클래스의 오브젝트인 것은 알지만 
+               //다른 포록시를 추가할수도 있으므로 인터페이스로 접근한다.
+
+  public HelloUppercase(Hello hello){
+    this.hello = hello;
+  }
+  public String sayHello(String name){
+    return hello.sayHello(name).toUpperCase(); // 위임과 부가기능 적용
+  }
+  
+  public String sayHi(String name){
+    return hello.sayHi(name).toUpperCase();
+  }
+  
+  public String sayThankYou(String name){
+    return hello.sayThankYou(name).toUpperCase();
+  }  
+}
+```
+
+HelloUppercase 프록시 테스트
+```java
+Hello proxiedHello = new HelloUppercase(new HelloTarget()); //프록시를 통해 타기 오브젝트에 접근하도록 구성한다.
+assertThat(proxiedHello.sayHello("Toby"),is("HELLO TOBY"));
+```
+
+이 프록시는 프록시 적용의 일반적인 문제점 두 가지를 모두 갖고 있다. 
+인터페이스의 모든 메소드를 구현해 위함도록 코드를 만듦
+부가기능인 리턴값을 대문자로 바구는 기능이 모든 메소드에 중복돼서 나타남
+
+
+### 다이내믹 프록시 적용
+다이내믹 프록시는 프록시 팩토리에 의해 런타임 시 다이내믹하게 만들어지는 오브젝트다. </br>
+다이내믹 프록시 오브젝트는 타깃의 인터페이스와 같은 타입으로 만들어진다. </br>
+클라이언트는 다이내믹 프록시 오브젝트를 타깃 인터페이스를 통해 사용할 수 있다. </br>
+이 덕분에 프록시를 만들때 인터페이스를 모두 구현해가면서 클래스를 정의하는 수고를 덜수 있다. </br>
+프록시 팩토리에게 인터페이스 정보만 제공해주면 해당 인터페이스를 구현한 클래스의 오브젝트를 자동으로 만들어주기 때문이다. </br>
+
+다이내믹 프록시가 인터페이스 구현 클래스의 오브젝트는 만들어주지만, 프록시로서 필요한 부가기능 제공 코드는 직접작성해야 한다. </br>
+부가기능은 프록시 오브젝트와 독립적으로 InvocationHandler를 구현한 오브젝트에 담는다. 
+InvocationHandler인터페이스는 다음과 같은 메소드 한 개만 가진 간단한 인터페이스다.
+```java
+public Object invoke(Object proxy, Method method, Object[] args)
+```
