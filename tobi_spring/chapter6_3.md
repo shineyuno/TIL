@@ -146,3 +146,90 @@ InvocationHandler인터페이스는 다음과 같은 메소드 한 개만 가진
 ```java
 public Object invoke(Object proxy, Method method, Object[] args)
 ```
+
+InvocationHandler 구현 클래스
+```java
+public class UppercaseHandler implements InvocationHandler{
+  Hello targer;
+  
+  public UppercaseHandler(Hello target){  //다이내믹 프록시로부터 전달받은 요청을 다시 타깃 오브젝트에 위임해야 하기 때문에 타깃 오브젝트를 주입받아둔다.
+    this.target = target;
+  }
+  
+  public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    String ret = (String)method.invoke(target, args); // 타깃으로 위임, 인터페이스의 메소드 호출에 모두 적용된다.
+    return ret.toUpperCase(); //부가기능 제공
+  }
+}
+```
+
+### 다이내믹 프록시의 확장
+
+확장된 UppercaseHandler
+```java
+public class UppercaseHandler implements InvocationHandler{
+  Object targer;
+  
+  private UppercaseHandler(Object target){  //어떤 종류의 인터페이스를 구현한 타깃에도 적용가능하도록  Object 타입으로 수정
+    this.target = target;
+  }
+  
+  public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    
+    Object ret = method.invoke(target, args);
+    if(ret instanceOf String && method.getName().startWith("say")){ // 리턴타입과 메소드 이름이 일치하는 경우에만 부가기능 적용
+      return ret.toUpperCase();
+    }else {
+      return ret; //조건이 일치하지 않으면 타깃 오브젝트의 호출 결과를 그대로 리턴한다.
+    }
+  }
+}
+```
+
+
+## 6.3.3 다이내믹 프록시를 이용한 트랜잭션 부가기능
+
+다이내믹 프록시를 위한 트랜잭션 부가기능
+```java
+public class TransactionHandler implements InvocationHandler {
+  private Object target; //부가기능을 제공할 타깃 오브젝트 어떤 타입의 오브젝트에도 적용 가능하다.
+  private PlatformTransactionManager transactionManager;  //트랜잭션 기능을 제공하는데 필요한 트랜잭션 매니져
+  private String pattern; //트랜잭션을 적용할 메소드 이름 패턴
+  
+  public void setTarget(Object target){
+    this.target = target;
+  }
+  
+  public void setTransactionManager(PlatformTransactionManager transactionManager) {
+    this.transactionManager = transactionManager;
+  }
+  
+  public void setPattern(String pattern){
+    this.pattern = pattern;
+  }
+  
+  public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    if(method.getName().startWith(pattern)){    //트랜잭션 적용 대상 메소드를 선별해서 트랜잭션 경계설정 기능을 부여해 준다.
+      return invokeInTransaction(method, args);
+    } else {
+      return method.invoke(target, args);
+    }
+  }
+  
+  private Object invokeTnTransaction(Method method, Object[] args) throws Throwable {
+    TransactionStatus status = this.transactionManager.getTransaction(new DefaultTransactionDefinition());
+    
+    try {
+      Object ret = method.invoke(target, args); //트랜잭션을 시작하고 타기 오브젝트의 메소드를 호출한다. 예외가 발생하지 않았다면 커밋한다.
+      this.transactionManager.commit(status);
+      return ret;
+    } catch (InvocationTargetException e) {
+      this.transactionManager.rollback(status); //예외가 발생하면 트랜잭션을 롤백한다. 
+      throw e.getTargetException();
+    }
+  }
+}
+```
+
+리플렉션 메소드인  Method.invoke()를 이용해 타깃 오브젝트의 메소드를 호출할때는 타깃 오브젝트에서 발생하는 예외가
+InvocationTargetException으로 한번 포장돼서 전달된다.
