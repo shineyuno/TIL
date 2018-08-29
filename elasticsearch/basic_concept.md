@@ -84,3 +84,6 @@ Elasticsearch는 이러한 문제를 해결하고자 색인을 이른바 샤드(
 
 기본적으로 Elasticsearch의 각 색인은 기본 샤드 5개, 리플리카 1개를 갖습니다. 
 따라서 클러스터에 최소한 2개의 노드가 있다면 색인은 기본 샤드 5개, 리플리카 샤드 5개(완전한 리플리카 1개)를 가지므로 색인당 총 10개의 샤드가 존재하게 됩니다.
+
+## 참고
+[https://www.elastic.co/guide/kr/elasticsearch/reference/current/gs-basic-concepts.html](https://www.elastic.co/guide/kr/elasticsearch/reference/current/gs-basic-concepts.html)
