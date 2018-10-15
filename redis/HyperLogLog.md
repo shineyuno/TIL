@@ -88,7 +88,7 @@ redis>
 ```
 논리적 처리 소요시간은 O(N)이다.
 
-##참조
+## 참조
 [확률적 자료구조를 이용한 추정 - 유일한 원소 개수(Cardinality) 추정과 HyperLogLog](https://d2.naver.com/helloworld/711301) <br>
 [https://redis.io/commands/pfadd](https://redis.io/commands/pfadd) <br>
 [http://redisgate.kr/redis/command/hyperloglog.php](http://redisgate.kr/redis/command/hyperloglog.php) <br>
