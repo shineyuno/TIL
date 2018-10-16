@@ -233,3 +233,31 @@ public class TransactionHandler implements InvocationHandler {
 
 리플렉션 메소드인  Method.invoke()를 이용해 타깃 오브젝트의 메소드를 호출할때는 타깃 오브젝트에서 발생하는 예외가
 InvocationTargetException으로 한번 포장돼서 전달된다.
+
+다이내믹 프록시를 이용한 트랜잭션 테스트
+```java
+@Test
+public void upgradeAllOrNothing() throws Exception {
+  ...
+  TransactionHandler txHandler = new TransactionHandler();
+  txHandler.setTarget(testUserService);
+  txHandler.setTransactionManager(transactionManager); //트랜잭션 핸들러가 필요한 정보와 오브젝트를 DI 해준다.
+  txHandler.setPattern("upgradeLevels");
+  
+  UserService txUserService = (UserService)Proxy.newProxyInstance( // UserService 인터페이스 타입의 다이내믹 프록시 생성 
+    getClass().getClassLoader(), new Class[] {UserService.class}, txHandler); 
+    
+  ...
+}
+```
+
+## 6.3.4 다이내믹 프록시를 위한 팩토리 빈
+DI의 대상이 되는 다이내믹 프록시 오브젝트는 일반적인 스프링의 빈으로는 등록할 방법이 없다. 
+스프링의 빈은 기본적으로 클래스 이름과 프로퍼티로 정의된다. 
+스프링은 지정된 클래스 이름을 가지고 리플렉션을 이용해서 해당 클래스의 오브젝트를 만든다.
+클래스의 이름을 갖고 있다면 다음과 같은 방법으로 새로우 오브젝트를 생성할수 있다.
+Class의 newInstance() 메소드는 해당 클래스의 파라미터가 없는 생성자를 호출하고, 그 결과 생성되는 오브젝트를 돌려주는 리플렉션 API다
+```java
+Date now = (Date) Class.forName("java.util.Date").newInstance
+```
+스프링은 내부적으로 리플렉션 API를 이용해서 빈 정의에 나오는 클래스 이름을 가지고 빈 오브젝트를 생성한다.
