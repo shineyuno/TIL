@@ -261,3 +261,99 @@ Class의 newInstance() 메소드는 해당 클래스의 파라미터가 없는 �
 Date now = (Date) Class.forName("java.util.Date").newInstance
 ```
 스프링은 내부적으로 리플렉션 API를 이용해서 빈 정의에 나오는 클래스 이름을 가지고 빈 오브젝트를 생성한다.
+
+
+### 팩토리 빈
+팩토리 빈이란 스프링을 대신해서 오브젝트의 생성로직을 담당하도록 만들어진 특별한 빈을 만든다.
+팩토리 빈을 만드는 가장 간단한 방법은 스프링의 FactoryBean이라는 인터페이스를 구현하는 것이다.
+FactoryBean 인터페이스는 아래에 나와 있는 대로 세가지 메소드로 구성되어 있다.
+
+
+FactoryBean 인터페이스
+```java
+package org.springframework.beans.factory;
+
+public interface FactoryBean<T> {
+  T getObject() throws Exception; // 빈 오브젝트를 생성해서 돌려준다.
+  Class<? extends T> getObjectType(); // 생성되는 오브젝트의 타입을 알려준다.
+  boolean isSingleton(); // getObject()가 돌려주는 오브젝트가 항상 같은 싱글톤으로 오브젝트인지 알려준다.
+}
+```
+
+FactoryBean 인터페이스를 구현한 클래스를 스프링의 빈으로 등록하면 팩토리 빈으로 동작한다.
+
+생성자를 제공하지 않는 클래스
+```java
+public class Message {
+  String text;
+  
+  private Message(String text){ //생성자가 private으로 선언되어 있어서 외부에서 생성자를 통해 오브젝트를 만들 수 없다.
+   this.text = text;
+  }
+  
+  public String getText(){
+    return text;
+  }
+  
+  public static Message newMessage(String text) { //생성자 대신 사용할수 있는 스태틱 팩토리 메소드를 제공한다.
+    return new Message(text);
+  }
+}
+```
+
+위 Message 클래스는 다음과 같은 방식으로 사용하면 안된다
+```xml
+<bean id="m" class="....factorybean.Message">  ///private 생성자를 가진 클래스의 직접 사용금지
+```
+
+Message 클래스의 오브젝트를 생성해주는 팩토리 빈클래스를 만들어 보자.
+FactoryBean 인터페이스를 구현해서 아래와 같이 만들면 된다.
+
+Message의 팩토리 빈 클래스
+```java
+public class MessageFactoryBean implements FactoryBean<Message> {
+  String text;
+  
+  public void setText(String text){ // 오브젝트를 생성할 때 필요한 정보를 팩토리 빈의 프로퍼티로 설정해서 대신 DI 받을수 있게 한다.
+    this.text = text;               // 주입된 정보는 오브젝트 생성중에 사용된다.
+  }
+  
+  public Message getObject() throws Exception { //실제 빈으로 사용될 오브젝트를 직접 생성한다. 코드를 이용하기 때문에 복잡한 방식의 
+    return Message.newMessage(this.text);       // 오브젝트 생성과 초기화 작업도 가능하다.
+  }
+  
+  public Class<? extends Message> getObjectType() {
+    return Message.class;
+  }
+  
+  public boolean isSingleton() {  // getObject()메소드가 돌려주는 오브젝트가 싱글톤인지를 알려준다. 이 팩토리 빈은 매번요청할 때마다
+    return false;                 // 새로운 오브젝트를 만들므로 false로 설정한다. 이것은 팩토리 빈의 동작방식에 관한 설정이고 만들어진
+  }                               // 빈 오브젝트는 싱글톤으로 스프링이 관리해줄 수 있다.
+}
+```
+
+팩토리 빈은 전형적인 팩토리 메소드를 가진 오브젝트다. 
+스프링은 FactoryBean인터페이스를 구현한 클래스가 빈의 클래스로 지정되면, 팩토리 빈 클래스의 오브젝트의 getObject()메소드를 이용해
+오브젝트를 가져오고, 이를 빈 오브젝트로 사용한다. *빈의 클래스로 등록된 팩토리 빈은 빈 오브젝트를 생성하는 과정에서만 사용*될 뿐이다.
+
+
+### 팩토리 빈의 설정 방법
+팩토리 빈설정
+```xml
+<bean id="message" class=".....factorybean.MessageFactoryBean">
+  <property name="text" value="Factory Bean" />
+</bean>  
+```
+여타 빈 설정과 다른점은 message 빈 오브젝트의 타입이 class 애트리뷰트에 정의된 MessageFactoryBean이 아니라 Message 타입이라는 것이다.
+Messsage 빈의 타입은 MessageFactoryBean의 getObjectType() 메소드가 돌려주는 타입으로 결정된다. 
+또, getObject()메소드가 생성해주는 오브젝트가 message 빈의 오브젝트가 된다.
+
+팩토리 빈이 만들어주는 빈 오브젝트가 아니라 팩토리 빈 자체를 가져오고 싶을 경우도 있다.
+이럴 때를 위해 스프링은 '&'를 빈 이름 앞에 붙여주면 팩토리 빈 자체를 돌려준다. 
+```java
+@Test
+  public void getFactoryBean()throws Exception {
+    Object factory = context.getBean("&message"); //&이 붙고 안 붙고에 따라 getBean()메소드가 돌려주는 오브젝트가 달라진다.
+    assertThat(factory, is(MessageFactoryBean.class));
+  }
+```
