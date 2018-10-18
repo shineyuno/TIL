@@ -357,3 +357,69 @@ Messsage 빈의 타입은 MessageFactoryBean의 getObjectType() 메소드가 돌
     assertThat(factory, is(MessageFactoryBean.class));
   }
 ```
+
+### 다이내믹 프록시를 만들어주는 팩토리 빈 
+Proxy의 newProxyInstance() 메소드를 통해서만 생성이 가능한 다이내믹 프록시 오브젝트는 일반적인 방법으로는 스프링의 빈으로 등록할 수 없다.
+대신 팩토리 빈을 사용하면 다이내믹 프록시 오브젝트를 스프링의 빈으로 만들어줄 수가 있다. 
+팩토리 빈의 getObject() 메소드에 다이내믹 프록시 오브젝트를 만들어주는 코드를 넣으면 되기 때문이다.
+
+
+### 트랜잭션 프록시 팩토리빈
+트랜잭션 프록시 팩토리 빈
+```java
+public class TxProxyFactoryBean implements FactoryBean<Object> { // 생성할 오브젝트 타입을 지정할 수도 있지만 범용적으로 사용하기 위해 Object로 했다.
+
+  Object target;
+  PlatformTransactionManager transactionManager; // TransactionHandler를 생성할 때 필요
+  String pattern;
+  
+  Class<?> serviceInterface;  // 다이내믹 프록시를 생성할 때 필요하다. UserServie 외의 인터페이스를 가진 타깃에도 적용할 수 있다.
+  
+  public void setTarget(Object target) {
+    this.target = target;
+  }
+  
+  public void setTransactionManager(PlatformTransactionManager transactionManager) {
+    this.transactionManager = transactionManager;
+  }
+  
+  public void setPattern(String pattern) {
+    this.pattern = pattern;
+  }
+  
+  public void setServiceInterface(Class<?> serviceInterface) {
+    this.serviceInterface = serviceInterface;
+  }
+  
+  // FactoryBean 인터페이스 구현 메소드
+  public Object getObject() throws Exception {  // DI 받은 정보를 이용해서 TransactionHandler를 사용하는 다이내믹 프록시를 생성한다.
+    TransactionHandler txHandler = new TransactionHandler();
+    txHandler.setTarget(target);
+    txHandler.setTransactionManager(transactionManager);
+    txHandler.setPattern(patter);
+    return Proxy.newProxyInstance(
+      getClass().getClassLoader(), new Class[] { serviceInterface}, 
+      txHandler);
+  }
+  
+  public Class<?> getObjectType() { 
+    return serviceInterface;   // 팩토리 빈이 생성하는 오브젝트의 타입은 DI 받은 인터페이스 타입에 따라 달라진다. 따라서 다양한 타입의  
+  }                            // 프록시 오브젝트 생성에 재사용 할 수 있다.
+  
+  public boolean isSingleton() {
+    return false; // 싱글톤 빈이 아니라는 뜻이 아니라 getObject()가 매번 같은 오브젝트를 리턴하지 않는다는 의미다.
+  }
+}
+```
+
+UserService에 대한 트랜잭션 프록시 팩토리 빈
+```xml
+<bean id="userService" class="springbook.user.serivce.TxProxyFactoryBean">
+  <property name="target" ref="userSeirviceImpl" />
+  <property name="transactionManger" ref="transactionManager" />
+  <property name="pattern" value="upgradeLevels" />
+  <property name="serviceInterface" value="springbook.user.service.UserService" />
+</bean>  
+```
+target, transactionManger 프로퍼티는 다른빈을 가리키는 것이니 ref 애트리뷰트로 설정
+Class 타입은 value를 이용해 클래스 또는 인터페이스의 이름을 넣어주면된다.
