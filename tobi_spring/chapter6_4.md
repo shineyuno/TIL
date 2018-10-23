@@ -133,3 +133,68 @@ public class TransactionAdvice implements MethodInterceptor { // 스프링의 �
 
 리플렉션을 통한 타깃 메소드 호출 작업의 번거로움은 MethodInvocation타입의 콜백을 이용한 덕분에 대부분 제거할 수 있다. 
 타깃 메소드가 던지는 예외도 InvocationTargetException으로 포장돼서 오는 것이 아니기 때문에 그대로 잡아서 처리하면 된다. 
+
+### 스프링 xml 설정파일
+트랜잭션 어드바이스 빈 설정
+```xml
+<bean id="transactionAdvice" class="springbook.user.service.TransactionAdvice">
+  <property name="transactionManager" = ref="transactionManager" />
+</bean>
+```
+
+포인트컷 빈 설정
+```xml
+<bean id="transactionPointcut" class="org.springframework.aop.support.NameMatchMethodPointcut">
+  <property name="mappendName" value="upgrade*" />
+</bean>
+```
+메소드 이름 패턴은 upgrade로 시작하는 모든 메소드를 선택하도록 만든 빈설정.
+
+
+어드바이스와 포인트컷을 담을 어드바이저 빈 설정
+```xml
+<bean id="transactionAdvisor" class="org.springframework.aop.support.DefaultPointcutAdvisor">
+  <property name="advice" ref="transactionAdvice" />
+  <property name="pointcut" ref="transactionPointcut" />
+</bean>  
+```
+
+
+ProxyFactoryBean 설정
+```xml
+<bean id="userService" class="org.springframework.aop.framework.ProxyFactoryBean">
+  <property name="target" ref="userSericeImpl" />
+  <property name="interceptorNames"> ## 어드바이스와 어드바이저를 동시에 설정해줄 수 있는 프로퍼티. 리스트에 어드바이스나 어드바이저의
+                                     ## 빈 아이디를 값으로 넣어주면 된다. 기존의 ref 애트리뷰트를 사용하는 DI와는  방식이 다름에 주의해야 한다.
+    <list>
+      <value>transactionAdvisor</value>   ## 한 개 이상의 <value> 태그를 넣을수 있다.
+    </list>
+  </property>
+  </bean>
+```
+어드바이저는 interceptorNames라는 프로퍼티를 통해 넣는다.
+프로퍼티 이름이 advisor가 아닌 이유는 어드바이스와 어드바이저를 혼합해서 설정할 수 있도록 하기 위해서다.
+그래서 properrty 태그의 ref 애트리뷰트를 통한 설정 대신 list와 value 태그를 통해 여러개의 값을 넣을 수 있도록 하고 있다.
+
+### 테스트 
+ProxyFactoryBean을 이용한 트랜잭션 테스트
+
+```java
+@Test
+@DirtiesContext // 컨텍스트 설정을 변경하기 때문에 여전히 필요하다.
+public void upgradeAllOrNothing() {
+  TestUserService testUserService = new TestUserService(user.get(3).getId());
+  testUserService.setUserDao(userDao);
+  testUserSerivce.setMailSender(mailSender);
+  
+  ProxyFactoryBean txProxyFactoryBean = context.getBean("&userService", ProxyFactoryBean.class); // userService 빈은 이제 스프링의 
+                                                                                                 // ProxyFactoryBean 이다.
+  txProxyFactoryBean.setTarget(testUserService);
+  UserService txUserService = (UserService) txProxyFactoryBean.getObject(); // FactoryBean 타입이므로 동일하게 getObject()로 프록시를 가져온다.
+  
+  ...
+}
+```
+
+### 어드바이스와 포인트컷의 재사용
+트랜잭션 부가기능을 담은 TransactionAdvice는 하나만 만들어서 싱글톤 빈으로 등록해주면, DI 설정을 통해 모든 서비스에 적용이 가능하다.
