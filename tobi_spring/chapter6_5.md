@@ -40,3 +40,39 @@ DefaultAdvisorAutoProxyCreator는 어드바이저를 이용한 자동 프록시 
 
 적용할 빈을 선정하는 로직이 추가된 포인트컷이 담긴 어드바이저를 등록하고 빈 후처리기를 사용하면 일일이 ProxyFactoryBean 빈을 등록하지
 않아도 타깃 오브젝트에 자동으로 프록시가 적용되게 할수 있다. 
+
+
+### 확장된 포인트컷
+두 가지 기능을 정의한 Pointcut 인터페이스
+```java
+public interface Pointcut {
+    ClassFilter getClassFilter(); //프록시를 적용할 클래스인지 확인해준다.
+    MethodMatcher getMethodMatcher();   //어드바이스를 적용할 메소드인지 확인해준다.
+}
+```
+기존에 사용한 NameMatchMethodPointcut은 메소드 선별 기능만 가진 특별한 포인트 컷이다.
+메소드만 션별한다는건 클래스 필터는 모든 클래스를 다 받아주도록 만들어져 있다는 뜻이다.
+ProxyFactoryBean에서 포인트컷을 사용할때는 이미 타깃이 정해져 있기 때문에 포인트컷은 메소드 선별만 해주면 그만이다.
+만약 Pointcut 선정 기능을 모두 적용한다면 먼저 프록시를 적용할 클래스인지 판단하고 나서, 적용 대상 클래스인 경우에는
+어드바이스를 적용할 메소드인지 확인하는 식으로 동작한다.
+
+모든 빈에 대해 프록시 자동 적용 대상을 선별해야 하는 빈 후처리기인 DefaultAdvisorAutoProxyCreator는 클래스와 메소드
+선정 알고리즘을 모두 갖고 있는 포인트컷이 필요하다.
+
+확장 포인트컷 테스트
+```java
+@Test
+public void classNamePointcutAdvisor(){
+    //포인트컷 준비
+    NameMatchMethodPointcut classMethodPointcut = new NameMatchMethodPointcut(){
+        public ClassFilter getClassFilter() {   //익명 내부 클래스 방식으로 클래스를 정의한다.
+            return new ClassFilter(){
+                public boolean match(Class<?> clazz){
+                    return clazz.getSimpleName().startsWith("HelloT");  // 클래스 이름이 HelloT로 시작하는것만 선정한다.
+                }
+            };
+        }
+    };
+    ...
+}
+```
