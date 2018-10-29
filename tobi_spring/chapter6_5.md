@@ -73,6 +73,109 @@ public void classNamePointcutAdvisor(){
             };
         }
     };
-    ...
+    
+    classMethodPointcut.setMappedName("sayH*"); //sayH로 시작하는 메소드 이름을 가진 메소드만 선정한다.
+    
+    //테스트
+    checkAdviced(new HelloTarget(), classMethodPointcut,true);  //적용 클래스다
+    
+    class HelloWorld extends HelloTarget {};
+    checkAdviced(new HelloWorld(), classMethodPointcut, false); // 적용클래스가 아니다.
+}
+
+private void checkAdviced(Object target, Pointcut pointcut, boolean adviced) { [3]  //adviced ->적용대상인가?
+    ProxyFactoryBean pfBean = new ProxyFactoryBean();
+    pfBean.setTarget(target);
+    pfBean.addAdvisor(new DefaultPointcutAdvisor(pointcut, new UppercaseAdivce()));
+    Hello proxiedHello = (Hello) pfBean.getObject();
+    
+    if(adviced){
+        assertThat(proxiedHello.sayHello("Toby"), is("HELLO TOBY"));    // 메소드 선정 방식을 통해 어드바이스 적용
+    } else {
+        assertThat(proxiedHello.sayHello("Toby"), is("Hello Toby"));    //어드바이스 적용 대상 후보에서 아예터ㅏㄹ럭 
+    }
+        
+}
+```
+포인트컷은 NameMatchMethodPointcut을 내부 익명 클래스 방식으로 확장해서 만들었다.
+원래 모든 클래스를 다 받아주는 클래스 필터를 리턴하던 getClassFilter()를 오버라이드해서
+이름이 HelloT로 시작하는 클래스만을 선정해주는 필터로 만들었다.
+
+포인트컷이 클래스 필터까지 동작해서 클래스를 걸러버리면 아무리 프록시를 적용했다고 해도 부가기능은 전혀
+제공되지 않는다는 점에 주의해야 한다.
+
+## 6.5.2 DefaultAdvisorAutoProxyCreator의 적용
+
+
+### 클래스 필터를 적용한 포인트컷 작성
+클래스 필터가 포함된 포인트컷
+```java
+public class NameMatchClassMethodPointcut extends NameMatchMethodPointcut {
+    public void setMappedClassName(String mappedClassName){
+        this.setClassFilter(new SimpleClassFilter(mappedClassName)); //모든 클래스를 다 허용하던 디폴트 클래스 필터를 프로퍼티로
+                                                                    //받은 클래스 이름을 이용해서 필터를 만들어 덮어씌운다.
+    }
+
+    static class SimpleClassFilter implements ClassFilter {
+        String mappedName;
+
+        private SimpleClassFilter(String mappedName) {
+            this.mappedName = mappedName;
+        }
+
+        public boolean matches(Class<?> clazz){
+            return PatternMatchUtils.simpleMatch(mappedName, clazz.getSimpleName());
+            //simpleMatch() 와일드카드(*)가 들어간 문자열 비교를 지원하는 스프링의 유틸리티 메소드다. *.name, name.*,*name* 세가지 방식을 모두 지원한다.
+        }
+    }
+}
+
+```
+
+### 어드바이저를 이용하는 자동 프록시 생성기 등록
+적용할 자동프록시 생성기인 DefaultAdvisorAutoProxyCreator는 등록된 빈중에서 Advisor 인터페이스를 구현한 것을 모두 찾는다.
+그리고 생성되는 모든 빈에 대해 어드바이저의 포인트컷을 적용해보면서 프록시 적용 대상을 선정한다.
+
+DefaultAdvisorAutoProxyCreator 등록은 다음 한 줄이면 충분한다.
+```xml
+<bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator" />
+```
+이 빈의 정의에는 특이하게도 id 애트리뷰트가 없고 class뿐이다. 다른 빈에서 참조되거나 코드에서 빈 이름으로
+조회될 필요가 없는 빈이라면 아이디를 등록하지 않아도 무방한다.
+
+### 포인트컷 등록
+
+포인트컷 빈
+```xml
+<bean id="transactionPointcut" class="springbook.service.NameMatchClassMethodPointcut" >
+    <property name="mappedClassName" value="*ServiceImpl" /> ##클래스 이름 패턴
+    <property name="mappedName" value="upgrade" />  ## 메소드 이름패턴
+</bean>
+```
+
+### 어드바이스와 어드바이저
+자동생성된 프록시에 다이내믹하게 DI 돼서 동작하는 어드바이저가 된다.
+
+### ProxyFactoryBean 제거와 서비스 빈의 원상복구
+
+프록시 팩토리빈을 제거한 후의 빈 설정
+```xml
+<bean id="userService" class="springbook.service.UserServiceImpl" >
+    <property name="userDao" ref="userDao" />
+    <property name="mailSender" ref="mailSender" />
+</bean>
+```
+
+### 자동 프록시 생성기를 사용하는 테스트
+수정한 테스트용 UserService 구현 클래스
+
+```java
+static class TestUserServiceImpl extends UserServiceImpl {  //포인트컷의 클래스 필터에 선정되도록 이름 변경
+    private String id = "madnite1"; // 테스트 픽스처의 user(3) id값을 고정시켜버렸다.
+    
+    protected void upgradeLevel(User user){
+        if(user.getId().equals(this.id)) throw new TestUserServiceException();
+        super.upgradeLevel(user);
+    }
 }
 ```
