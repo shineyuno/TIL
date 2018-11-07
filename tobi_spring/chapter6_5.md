@@ -222,3 +222,50 @@ System.out.println(Target.class.getMethod("minus", int.class, int.class));
 ```java
 public int springbook.learnigtest.spring.pointcut.Target.minus(int,int) throws java.lang.RuntimeException
 ```
+
+### 포인트컷 표현식 테스트
+메소드 시그니처를 그대로 사용한 포인트 표현식을 문법구조를 참고로 해서 정리해보자.
+이 중에서 필수가 아닌 항목인 접근제한자 패턴, 클래스 타입 패턴, 예외 패턴은 생략할 수 있다.
+옵션 항목을 생략하면 다음과 같이 간단하게 만들 수 있다.
+```java
+execution(int minus(int,int))   // int 타입의 리턴값, minus라는 메소드 이름, 두개의 int 파라미터를 가진 모든 메소드를 선정하는 포인트컷 표현식
+```
+
+리턴값의 타입에 대한 제한을 없애고 어떤 리턴 타입을 가졌든 상관없이 선정하도록 만들려면 다음과 같이 * 와일드카드를 쓰면 된다.
+```java
+execution(* minus(int,int))
+```
+
+또 파라미터의 개수와 타입을 무시하려면 ()안에 ..를 넣어준다.
+```java
+execution(* minus(..))
+```
+
+만약 모든 선정조건을 다 없애고 모든 메소드를 다 허용하는 포인트컷이 필요하다면 다음과 같이 메소드 이름도 와일드카드로 바꾸면된다.
+```java
+execution(* *(..))
+```
+
+빈으로 등록된 클래스의 단순한 이름만 비교했던 방식과 달리 포인트컷 표현식은 인터페이스, 슈퍼클래스의 타입도 인식해준다.
+그래서 클래스 이름 패턴이라기보다는 타입 패턴이라고 부르는 것이다.
+
+### 포인트컷 표현식을 이용하는 포인트컷 적용
+AspectJ 포인트컷 표현식은 메소드를 선정하는 데 편리하게 쓸 수 있는 강력한 표현식 언다.
+
+특정 애노테이션이 타입, 메소드 파라미터에 적용되어  있는 것을 보고 메소드를 선정하게 하는 포인트컷도 만들 수 있다.
+아래와 같이 쓰면 @Transactional이라는 애노테이션이 적용된 메소드를 선정하게 해준다.
+까다로운 명명 규칙을 사용하지 않아도 애노테이션만 부여해놓고, 포인트컷을 통해 자동으로 선정해서, 
+부가기능을 제공하게 해주는 방식은 스프링 내에서도 애용되는 편리한 방법이다.
+```java
+@annotation(org.springframework.transaction.annotation.Transactional)
+```
+
+클래스 이름은 ServiceImple로 끝나고 메소드 이름은 upgrade로 시작하는 모든 클래스에 적용되도록 하는표현식을 적용한 빈설정을
+만들어보려면 아래와 같다.
+
+리스트 6-65 포인트컷 표현식을 사용한 빈설정
+```java
+<bean id="transactionPointcut" class="org.springframework.aop.aspectj.AspectJExpressionPointcut" >
+    <property name="expression" value="execution(* *..*ServiceImpl.upgrade*(..)"    />
+</bean>    
+```
