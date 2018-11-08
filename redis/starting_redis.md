@@ -68,3 +68,7 @@ $./redis-server --port 6380 --requirepass "hello world"
 
 내부적으로 이는 내부 메모리 임시 설정 파일을 생성합니다 ( 가능하다면 사용자가 전달한 설정 파일을 연결하여 ). 
 여기서 인수는 redis.conf의 형식으로 변환됩니다
+
+## 참조
+https://redis.io/topics/config <br>
+https://redis.io/topics/quickstart
