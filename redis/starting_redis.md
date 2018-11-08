@@ -53,12 +53,13 @@ requirepass "hello world"
 ##  command line 통해 인수 전달
 Redis 2.6부터 명령 줄을 사용하여 Redis 구성 매개 변수를 직접 전달할 수도 있습니다. 
 이는 테스트 목적으로 매우 유용합니다. 
+
 다음은 포트 6380을 127.0.0.1 포트 6379에서 실행중인 인스턴스의 슬레이브로 사용하여 새 Redis 인스턴스를 시작하는 예제입니다.
 ```sh
  $ ./redis-server --port 6380 --slaveof 127.0.0.1 6379 
 ```
-#### 포트 6380, 보안설정으로 접속시 password 설정
-비밀번호를 "hello world" 로 설정한 결우
+
+포트 6380 변경, 보안접속을 위해 비밀번호(를 "hello world" 로 설정한 결우
 ```sh
 $./redis-server --port 6380 --requirepass "hello world"
 ```
