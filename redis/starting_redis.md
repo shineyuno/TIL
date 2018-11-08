@@ -14,14 +14,19 @@ $ ./redis-server
 ## redis redis.conf 구성파일로 시작하기 
 Redis를 시작하거나 개발을 위해 Redis를 시작하는 경우에는 문제가 없지만 프로덕션 환경에서는 구성 파일을 사용해야합니다.
 구성 파일로 Redis를 시작하려면 구성 파일의 전체 경로를 첫 번째 인수로 사용하십시오  
+
+참조하려는 구성파일위치가 /etc/redis.conf 인경우
 ```sh
-##참조하려는 구성파일위치가 /etc/redis.conf 인경우
 $ ./redis-server /etc/redis.conf  
+```
 
-## 참조하려는 구성파일위치가 /Users/leo/Downloads/redis-4.0.11/redis.conf 인경우
+참조하려는 구성파일위치가 /Users/leo/Downloads/redis-4.0.11/redis.conf 인경우
+```sh
 $ ./redis-server /Users/leo/Downloads/redis-4.0.11/redis.conf
+```
 
-## redis-server 실행파일 위치인 /Users/leo/Downloads/redis-4.0.11/src/ 에서 실행하고 redis.conf 파일은 상위디렉토리에 있다면 아래처럼 실행가능 
+redis-server 실행파일 위치인 /Users/leo/Downloads/redis-4.0.11/src/ 에서 실행하고 redis.conf 파일은 상위디렉토리에 있다면 아래처럼 실행가능 
+```sh
 $ ./redis-server ../redis.conf
 ```
 Redis 소스 코드 배포의 루트 디렉토리에 포함 된 redis.conf 파일을 템플릿으로 사용하여 구성 파일을 작성해야합니다.
