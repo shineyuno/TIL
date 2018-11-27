@@ -318,3 +318,75 @@ AOP는 결국 애플리케이션을 다양한 측면에서 독립적으로 모�
 트랜잭션 기술의 적용에만 주목하고 싶다면 TrasactionAdvice에만 집중하면된다.
 그리고 그 대상을 결정해주는 transactionPointcut 빈의 설정만 신경 써주면 된다.
 애플리케이션을 특정한 관점을 기준으로 바라볼 수 있게 해준다는 의미에서 AOP를 *관점 지향 프로그래밍*라고도 한다.
+
+
+## 6.5.5 AOP 적용기술
+
+### 프록시를 이용한 AOP
+스프링은 IoC/DI 컨테이너와 다이내믹 프록시, 데코레이턴 패턴, 프록시 패턴, 자동 프록시 생성기법, 빈 오브젝트의 후처리 조작 기법 등의
+다양한 기술을 조합해 AOP를 지원하고 있다. 그중 가장 핵심은 프록시를 이용했다는 것이다.
+프록시로 만들어서 DI로 연결된 빈 사이에 적용해 타깃의 메소드 호출 과정에 참여해서 부가기능을 제공해주도록 만들었다.
+
+### 바이트코드 생성과 조작을 통한 AOP
+AspectJ는 프록시처럼 간접적인 방법이 아니라, 타깃 오브젝트를 뜯어고쳐서 부가기능을 직접 넣어주는 직접적인 방법을 사용한다.
+바이트코드 조작과 같은 복잡한 방법을 사용하는 이유
+
+첫째는 스프링과 같은 컨테이너가 사용되지 않는 환경에서도 손쉽게 AOP의 저굥이 가능해진다.
+
+둘째는 프록시 방식보다 훨씬 강력하고 유연한 AOP가 가능하기 때문이다.
+프록시를 AOP의 핵심메커니즘으로 사용하면 부가기능을 부여할 대상은 클라이언트가 호출할때 사용하는 메소드로 제한된다.
+하지만 바이트코드를 직접조작해서 AOP를 적용하면 오브젝트의 생성, 필드 값의 조회와 조작, 스태틱 초기화등의 다양한 작업에 부가기능을
+부여해줄 수 있다.
+
+## 6.5.7 AOP 네임스페이스
+스프링의 프록시 방식 AOP를 적용하려면 최소한 네 가지 빈을 등록해야 한다.
+
+* 자동 프록시 생성기
+* 어드바이스
+* 포인트컷
+* 어드바이저 
+
+이 중에서 부가기능을 담은 코드로 만든 어드바이스를 제외한 나머지 세 가지는 모두 스프링이 직접 제공하는 클래스를 빈으로 등록하고 
+프로퍼티 설정만 해준 것이다.
+
+### AOP 네임 스페이스
+스프링에서는 이렇게 AOP를 위해 기계적으로 적용한느 빈들을 간편한 방법으로 등록할수 있다.
+스프링은 AOP와 관련된 태그를 정의해둔 aop 스키마를 제공한다.
+aop 스키마에 정의된 태그를 사용하려면 설정파일에 aop네임스페이스 선언을 설정파일에 추가해줘야 한다.
+
+리스트 6-66 aop 네임스페이스 선언
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns=http://www.springframework.org/schema/beans"  ##beans 스키마는 디폴트 네임스페이스이므로 접두어 없이 사용할수 있다.
+...
+    xmlns:aop="http://www.springframework.org/schema/aop"   ## aop스키마는 aop 네임스페이스를 가지므로 aop 접두어를 사용한다.
+    xsi:schemaLocation=" ...
+                        http://www.springframework.org/schema/aop
+                        http://www.springframework.org/schema/aop/spring-aop-3.0.xsd">
+...
+</beans>
+```
+
+리스트 6-67 네임스페이스를 적용한 AOP 설정 빈
+```
+<aop:config>    ## AOP 설정을 담는 부모태그다. 필요에 따라 AspectJAdvisorAutoProxyCreator를 빈으로 등록해준다.
+    <aop:pointcut id="transactionPointcut"  ## exprssion의 표현식을 프로퍼티로 가진 AspectJExpressionPointcut을 빈으로 등록해준다.
+                    expression="execution(* *..*ServiceImpl.upgrade*(..))" />
+    <aop:advisor advice-ref="transactionAdvice" pointcut-ref="transactionPointcut" /> 
+    ## aop:advisor 는 advice와 pointcut의 ref를 프로퍼티로 갖는 DefaultBeanFactoryPointcutAdvisor를 등록해준다.
+</aop:config>
+```
+
+<aop:config>,<aop:pointcut>,<aop:advisor> 세 가지 태그를 정의해두면 그에 따라 세 개의 빈이 자동으로 등록된다.
+
+### 어드바이저 내장 포인트컷
+
+리스트 6-68 포인트컷을 내장한 어드바이저태그
+```
+<aop:config>   
+    <aop:advisor advice-ref="transactionAdvice" pointcut="execution(* *..*ServiceImpl.upgrade*(..))" /> 
+</aop:config>
+```
+태그가 하나 줄었으니 포인트컷을 독립적으로 정의하는 것보다 간결해서 보기 좋다.
+하지만 하나의 포인트컷을 여러 개의 어드바이저에서 공유하려고 하는 경우에는 포인트컷을 독립적인 <aop:pintcut> 태그로 등록해야 한다.
+포인트컷을 내장하는 경우에는 <aop:advisor> 태그 하나로 두 개의 빈이 등록된다.
