@@ -355,7 +355,7 @@ AspectJ는 프록시처럼 간접적인 방법이 아니라, 타깃 오브젝트
 aop 스키마에 정의된 태그를 사용하려면 설정파일에 aop네임스페이스 선언을 설정파일에 추가해줘야 한다.
 
 리스트 6-66 aop 네임스페이스 선언
-```
+```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns=http://www.springframework.org/schema/beans"  ##beans 스키마는 디폴트 네임스페이스이므로 접두어 없이 사용할수 있다.
 ...
@@ -368,7 +368,7 @@ aop 스키마에 정의된 태그를 사용하려면 설정파일에 aop네임�
 ```
 
 리스트 6-67 네임스페이스를 적용한 AOP 설정 빈
-```
+```xml
 <aop:config>    ## AOP 설정을 담는 부모태그다. 필요에 따라 AspectJAdvisorAutoProxyCreator를 빈으로 등록해준다.
     <aop:pointcut id="transactionPointcut"  ## exprssion의 표현식을 프로퍼티로 가진 AspectJExpressionPointcut을 빈으로 등록해준다.
                     expression="execution(* *..*ServiceImpl.upgrade*(..))" />
@@ -382,7 +382,7 @@ aop 스키마에 정의된 태그를 사용하려면 설정파일에 aop네임�
 ### 어드바이저 내장 포인트컷
 
 리스트 6-68 포인트컷을 내장한 어드바이저태그
-```
+```xml
 <aop:config>   
     <aop:advisor advice-ref="transactionAdvice" pointcut="execution(* *..*ServiceImpl.upgrade*(..))" /> 
 </aop:config>
