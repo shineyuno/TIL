@@ -107,7 +107,10 @@ b3e1c725a85f: Downloading  12.7 MB/50.22 MB
 4daad8bdde31: Download complete                                                 
 63fe8c0068a8: Download complete                                                 
 4a70713c436f: Download complete                                                 
-bd842a2105a8: Download complete                                                 
+bd842a2105a8: Download complete     
+
+Digest: sha256:7a64bc9c8843b0a8c8b8a7e4715b7615e4e1b0d8ca3c7e7a76ec8250899c397a 
+Status: Downloaded newer image for ubuntu:16.04   
 ```    
 run명령어를 사용하면 사용할 이미지가 저장되어 있는지 확인하고 없다면 다운로드(pull)를 한 후 컨테이너를 생성(create)하고 시작(start) 합니다.
 
@@ -119,17 +122,3 @@ run명령어를 사용하면 사용할 이미지가 저장되어 있는지 확�
 https://subicura.com/2017/01/19/docker-guide-for-beginners-2.html
                                                                                 
                                                                                 
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-00:00
-run ubuntu 16.04 container
-run명령어를 사용하면 사용할 이미지가 저장되어 있는지 확인하고 없다면 다운로드(pull)를 한 후 컨테이너를 생성(create)하고 시작(start) 합니다.
