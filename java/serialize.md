@@ -186,5 +186,7 @@ json (byte size = 62)
 
 ## 참조 
 http://woowabros.github.io/experience/2017/10/17/java-serialize.html
+
 http://woowabros.github.io/experience/2017/10/17/java-serialize2.html
+
 https://nesoy.github.io/articles/2018-04/Java-Serialize
