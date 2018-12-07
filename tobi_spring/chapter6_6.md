@@ -202,3 +202,49 @@ TransactionInterceptor 타입의 어드바이스 빈과 TransactionAttribute 타
 타깃 안에서의 호출에는 프록시가 적용되지 않은 문제를 해결할수 있는 방법은 두가지가 있다.
 * 스프링 API를 이용해 프록시 오브젝트에 대한 레퍼런스를 가져온뒤에 같은 오브젝트의 메소드 호출도 프록시를 이용하도록 강제하는 방법
 * AspectJ와 같은 타깃의 바이트코드를 직접조작하는 방식의 AOP 기술을 적용
+
+## 6.6.4 트랜잭션 속성 적용
+### 트랜잭션 경계설정의 일원화
+특정 계층의 경계를 트랜잭션의 경계와 일치시키는 것이 바람직하다.
+비즈니스 로직을 담고 있는 서비스 계층 오브젝트의 메소드가 트랜잭션 경계를 부여하기에 가장 적절한 대상이다.
+서비스 계층을 트랜잭션이 시작되고 종료되는 경계로 정했다면 다른계층이나 모듈에서 DAO에 직접 접근하는 것은 차단해야 한다.
+가능하면 다른 모듈의 DAO에 접근할 때는 서비스 계층을 거치도록 하는게 바람직 하다.
+그래야야 UserService의 add()처럼 부가 로직을 적용할 수도 있고, 트랜잭션 속성도 제어할수 있기 때문이다. 
+
+
+UserDao 인터페이스에 정의된 메소드 중에서 서비스계층에 새로 추가할 메소드
+단순히 레코드 개수를 리턴하는 getCount()를 제외하면 나머지는 독자적인 트랜잭션을 가지고 사용될 가능성이 높다.
+
+리스트 6-76 UserService에 추가된 메소드
+```java
+public interface UserService {
+  void upgradeLevels();
+  
+  
+  // DAO 메소드와 1:1대응되는 CRUD 메소드이지만 add()처럼 단순 위임 이상의 로직을 가질수 있다.
+  void add(User user);
+  //신규 추가 메소드 
+  User get(String id);
+  List<User> getAll();
+  void deleteAll();
+  void update(User user);
+  
+}
+```
+
+리스트 6-77 추가 메소드 구현
+```java
+public class UserServiceImpl implements UserService {
+  UserDao userDao;
+  
+  ...
+  
+  //DAO로 위임하도록 만든다. 필요한 부가 로직을 넣어도 좋다.
+  public User get(String id) { return userDao.get(id); }
+  public List<User> getAll() { return userDao.getAll(); }
+  public void deleteAll(){ userDao.deleteAll(); }
+  public void update(User user){ userDao.update(user); }
+  
+  ...
+}
+```
