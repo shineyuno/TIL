@@ -69,3 +69,6 @@ reset 명령을 통해 git add 와 git commit 명령으로 생성한 마지막 �
 
 이 --hard 옵션은 매우 매우 중요하다. reset 명령을 위험하게 만드는 유일한 옵션이다. 
 Git에는 데이터를 실제로 삭제하는 방법이 별로 없다. 이 삭제하는 방법은 그 중 하나다
+
+## 참조
+https://git-scm.com/book/ko/v2/Git-%EB%8F%84%EA%B5%AC-Reset-%EB%AA%85%ED%99%95%ED%9E%88-%EC%95%8C%EA%B3%A0-%EA%B0%80%EA%B8%B0
