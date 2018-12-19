@@ -79,3 +79,90 @@ public void transactionSync() {
   ...
 }
 ```
+
+## 6.8.3 테스트를 위한 트랜잭션 애노테이션
+스프링의 컨텍스트 테스트 프레임워크는 애노테이션을 이용해 테스트를 편리하게 만들 수 있는 여러 가지 기능을 추가하게 해준다.
+@ContextConfiguration을 클래스에 부여하면 테스트를 실행하기 전에 스프링 컨테이너를 초기화하고, 
+@Autowired 애노테이션이 붙은 필드를 통해 테스트에 필요한 빈에 자유롭게 접근할 수 있다.
+
+### @Transactional
+테스트에도 @Transactional을 적용할 수 있다. 테스트 클래스 또는 메소드에 @Transactional 애노테이션을 부여해주면
+마치 타깃 클래스나 인터페이스에 적용된것처럼 테스트 메소드에 트랜잭션 경계가 자동으로 설정된다.
+이를 이용하면 테스트 내에서 진행하는 모든 트랜잭션 관력작업을 하나로 묶어줄 수 있다.
+@Transactional에는 모든 종류의 트랜잭션 속성을 지정할 수 있기도 하다.
+
+리스트 6-97 테스트에 적용된 @Transactional
+```java
+@Test
+@Transactional
+public void transactionSync() {
+  userService.deleteAll();
+  userSerivce.add(users.get(0));
+  userSerivce.add(users.get(1));
+}
+```
+테스트 메소드안에서 실행되는 deleteAll(), add() 등은 테스트 메소드의 트랜잭션에 참여해서 하나의 트랜잭션으로 실행된다.
+
+트랜잭션 적용 여부를 확인해보고 싶다면 테스트의 트랜잭션을 리스트 6-98과 같이 읽기전용으로 바꾸고 테스트를 실행해
+예외가 발생하는지 확인해보면 된다.
+
+리스트 6-98 트랜잭션 적용 확인
+```java
+@Test
+@Transactional(readOnly=true)
+public void transactionSync() {
+  userService.deleteAll();  //@Transactional에 의해 시작된 트랜잭션에 참여하므로 읽기전용 속성 위반으로 예외가 발생한다.
+}
+```
+
+### @Rollback
+테스트에 적용된 @Transactional은 기본적으로 트랜잭션을 강제 롤백시키도록 설정되어 있다.
+@Transactional을 지정해주면 롤백 테스트가 되는 것이다.
+
+@Rollback은 롤백 여부를 지정하는 값을 갖고 있다. @Rollback의 기본 값은 true다.
+따라서 트랜잭션은 적용되지만 롤백을 원치 않는다면 @Rollback(false)라고 해줘야 한다.
+
+리스트 6-99와 같이 테스트 메소드를 설정해주면 테스트 전체에 걸쳐 하나의 트랜잭션이 만들어지고 예외가 발생하지 않는 한 트랜잭션은 커밋된다.
+
+리스트 6-99 테스트 트랜잭션을 커밋시키도록 설정한 테스트
+```java
+
+@Test
+@Transactional
+@Rollback(false)
+public void transactionSync() {
+  ...
+}
+```
+
+### TransactinConfiguration
+@Transactional은 테스트 클래스에 넣어서 모든 테스트 메소드에 일괄 적용할 수 있지만 @Rollback 애노테이션은 메소드 레벨에만 적용할수 있다.
+
+@TransactionConfiguration을 사용하면 롤백에 대한 공통 속성을 지정 할 수 있다.
+
+리스트 6-100 @TransactionConfiguration의 사용 예
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations= "/test-applicationContext.xml")
+@Transactional
+@TransactionConfiguration(defaultRollback=false)  //롤백 여부에 대한 기본 설정과 트랜잭션 매니저 빈을 지정하는데 사용할 수 있다.
+                                                  //디폴트 트랜잭션 매니저 아이디는 관례를 따라서 transactionManager로 되어 있다.
+public class UserServiceTest {
+  @Test
+  @Rollback // 메소드에서 디폴트 설정과 그 밖의 롤백 방법으로 재설정할 수 있다.
+  public void add() throws SQLException { ... }
+  ...
+}
+```
+
+### NotTransactional과 Propagation.NEVER
+```java
+@Transactional(propagation=Propagation.NEVER)
+```
+@Transactional을 다음과 같이 NEVER전파 속성으로 메소드에 부여하면 클래스 레벨의 @Transactional설정을 무시하고
+트랜잭셕을 시작하지 않은 채로 테스트를 진행한다. 
+물론 테스트안에서 호출하는 메소드드에서 트랜잭션을 사용하는 데는 영향을 주지 않는다.
+
+### 효과적인 DB테스트
+일반적으로 의존, 협력 오브젝트를 사용하지 않고 고립된 상태에서 테스트를 진행하는 단위테스트와,
+DB 같은 외부의 리소스나 여러 계층의 클래스가 참여하는 통합 테스트는 아예 클래스를 구분해서 따로 만드는게 좋다.
