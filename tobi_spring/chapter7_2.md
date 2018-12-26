@@ -92,3 +92,30 @@ sqlRegistry.addSqls(sqls);
 ```java
 sqlReader.readSql(sqlRegistry); // SQL을 저장할 대상인 sqlRegistry 오브젝트를 전달한다.
 ```
+
+## 7.2.5 자기참조 빈으로 시작하기
+### 다중 인터페이스 구현과 간접 참조
+인터페이스에만 의존하도록 만들어야 스프링의 DI를 적용할 수 있다.
+굳이 DI를 적용하지 않았더라도 자신이 사용하는 오브젝트의 클래스가 어떤 것인지 알지 못하게 만드는 것이 좋다.
+그래야 구현 클래스를 바꾸고 의존 오브젝트를 변경해서 자유롭게 확장할 기회를 제공해주는 것이다.
+
+자바는 extends를 이용해 다른 클래스이 구현 내용을 상속하려는 경우에는 하나의 클래스만 상속하게 한다.
+인터페이스는 한 개 이상을 상속하는것이 허용된다.
+
+인터페이스 구현은 타입을 상속하는 것이다.
+
+### 인터페이스를 이용한 분리
+
+### 자기참조 빈 설정
+
+리스트 7-36 자신을 참조하는 sqlService 빈 설정
+```xml
+<bean id="sqlService" class="springbook.user.sqlservice.XmlSqlService">
+ <property  name="sqlReader" ref="sqlService"/> ## 프로퍼티는 자긴 자신을 참조 할 수 있다. 수정자 메소드로 주입만 가능하면 된다.
+ <property  name="sqlRegistry" ref="sqlService"/>
+ <property  name="sqlmapFile" value="sqlamp.xml" />
+</bean> 
+```
+
+스프링은 프로퍼티의 ref 항목에 자기 자신을 넣는 것을 허용한다.
+인터페이스를 사용하고 DI를 이용하면 이렇게 특별한 구조까지도 유연하게 구성할 수 있다.
