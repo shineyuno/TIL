@@ -119,3 +119,48 @@ sqlReader.readSql(sqlRegistry); // SQL을 저장할 대상인 sqlRegistry 오브
 
 스프링은 프로퍼티의 ref 항목에 자기 자신을 넣는 것을 허용한다.
 인터페이스를 사용하고 DI를 이용하면 이렇게 특별한 구조까지도 유연하게 구성할 수 있다.
+
+## 7.2.6 디폴트 의존관계
+### 확장 가능한 기반 클래스
+### 디폴트 의존관계를 갖는 빈 만들기
+ 확장을 고려해서 기능을 분리하고, 인터페이스와 전략 패턴을 도입하고, DI를 적용한다면 늘어난 클래스와 인터페이스 구현과 의존관계
+ 설정에 대한 부담은 감수해야 한다.
+ 
+ 특정 의존 오브젝트가 대부분의 환경에서 거의 디폴트라고 해도 좋을 만큼 기본적으로 사용될 가능성이 있다면, 디폴트 의존관계를
+ 갖는 빈을 만드는 거슬 고려해볼 필요가 있다.
+  디폴트 의좐관계란 외부에서 DI 받지 않는 경우 기본적으로 자동 적용되는 의존관계를 말한다.
+  
+  리스트 7-41 생성자를 통한 디폴트 의존관계 설정
+  ```java
+  public class DefaultSqlService extends BaseSqlService {
+   public DefaultSqlService(){ //생성자에서 디폴트 의존 오브젝트를 직접 만들어서 스스로 DI 해준다.
+    setSqlReader(new JaxbXmlSqlReader()); 
+    setSqlRegistry(new HashMapSqlRegistry());
+   }
+  }
+  ```
+  
+  리스트 7-43 디폴트 값을 갖는 JaxbXmlSqlReader
+  ```java
+  public class JaxbXmlSqlReader implements SqlReader {
+   private static final String DEFAULT_SQLMAP_FILE = "sqlmap.xml"; //굳이 상수로 만들지 않고 바로 sqlmapFile의 값으로 넣어도 상관없지만
+                                                                   // 이렇게 해주면 의도가 코드에 분명히 드러나고 코드도 폼이 난다.
+   private String sqlmapFile = DEFAULT_SQLMAP_FILE;
+   
+   //sqlmapFile 프로퍼티를 지정하면 지정된 파일이 사용되고, 아니라면 디폴트로 넣은파일이 사용된다.
+   public void setSqlmapFile(String sqlmapFile) { this.sqlmapFile = sqlmapFile; } 
+ ...
+ ```
+ DI를 사용한다고 해서 항상 모든 프로퍼티 값을 설정에 넣고, 모든 의존 오브젝트를 빈으로 일일이 지정할 필요는 없다.
+ 먼저 BaseSqlService와 같이 의존 오브젝트를 DI해줌으로써 기능의 일부를 자유롭게 확장해줄 수 있는 기반을 만들어 둬야 하지만,
+ DefaultSqlService처럼 자주 사용되는 의본 오브젝트는 미리 지정한 디폴트 의존 오브젝트를 설정 없이도 사용할 수 있게 만드는것도 좋은 방법이다.
+ 
+ 디폴트 의존 오브젝트 대신 사용하고 싶은 구현 오브젝트가 있다면 7-44와 같이 설정에 프로퍼티를 추가해주면 된다.
+ 설정하지 않은 부분은 디폴트가 사용된다.
+ 
+ 리스트 7-44 디폴트 의존 오브젝트 대신 사용할 빈 선언
+ ```xml
+ <bean id="sqlService" class="springbook.user.sqlservice.DefaultSqlService" >
+  <property name="sqlRegistry" ref="ultraSuperFastSqlRegistry" />
+</bean>  
+ ```
