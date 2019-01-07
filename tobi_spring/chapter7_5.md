@@ -133,3 +133,109 @@ public class EmbeddedDbTest {
   }
 }
 ```
+
+### 내장형 DB를 이용한 SqlRegistry 만들기
+
+리스트 7-71 HSQL 내장형 DB설정 예
+```xml
+<jdbc:embedded-database id="embeddedDatabase" type="HSQL" >
+  <jdbc:script location="classpath:schema.sql" />
+</jdbc:embedded-database>  
+```
+embeddedDatabase 아이디를 가진 빈이 등록되며, 빈의 타입은 EmbeddedDatabase다.
+내장형 DB를 시작하고 초기화를 마쳤으니 EmbeddedDatabas 타입 빈 오브젝트를 이용해 내장형 DB를 자유롭게 사용할 수 있다. 
+
+### UpdatableSqlRegistry 테스트 코드의 재사용
+리스트 7-73 테스트 코드에서 ConcurrentHashMapSqlRegistry에 의존하는 부분
+```java
+public class ConcurrentHashMapSqlRegistryTest {
+  UpdatableSqlRegistry sqlRegistry; //테스트에서 사용할 픽스쳐는 인터페이스로 정의해두길 잘했다.
+  
+  @Before
+  public void setUp(){
+    sqlRegistry = new ConcurrentHashMapSqlRegistry(); // 오직 이문장만 ConcurrentHasMapSqlRegistry라는 특정클래스에 의존하고 있다.
+  ...
+  }
+}
+```
+
+리스트 7-74 UpdatatableSqlRegsitry에 대한 테스트 추상 클래스
+```java
+  public abstract class AbstractUpdatableSqlRegistryTest {  //UpdatableSqlRegistry 인터페이스를 구현한 모든클래스에 대한 테스트를 만들때
+                                                            //사용할수 있는 추상 테스트 클래스다.
+    UpdatableSqlRegistry sqlRegistry;
+    
+    @Before
+    public void setUp() {
+      sqlRegistry = createUpdatableSqlRegistry();
+      ...
+    }
+    
+    //테스트 픽스처를 생성하는 부분만 추상 메소드로 만들어두고 서브클래스에서 이를 구현하도록 만든다.
+    abstract protected UpdatableSqlRegistry createUpdatableSqlRegistry(); 
+    
+    //서브 클래스에 테스트를 추가한다면 필요할 수 있다. 따라서 서브클래스에서 접근이 가능하도록 protected로 변경한다.
+    protected void checkfind(String expected1, String expected2, Stirng expected3)  {
+      ...
+    }
+    
+    @Test
+    public void find(){
+      ...
+    }
+    
+    //나머지 테스트 생략
+  }
+```
+
+리스트 7-75 변경된 ConcurrentHashMapSqlRegistryTest
+```java
+public class ConcurrentHashMapSqlRegistryTest extends AbstractUpdatableSqlRegistryTest{
+  protected UpdatableSqlRegistry createUpdatableSqlRegistry (){
+    return new ConcurrentHashMapSqlRegistry();
+  }
+}
+ 
+```
+
+리스트 7-76 EmbeddedDbSqlRegistry에 대한 테스트 클래스
+```java
+public class EmbeddedDbSqlRegistryTest extends AbstractUpdatableSqlRegistryTest {
+  EmbeddedDatabase db;
+  
+  protected UpdatableSqlRegistry createUpdatableSqlRegistry (){
+    db = new EmbeddedDatabaseBuilder()
+    .setType(HSQL)  
+    .addScript("classpath:/springbook/learningtest/spring/embeddeddb/schema.sql")
+    .build(); 
+    
+    EmbeddedDbSqlRegistry embeddedDbSqlRegistry = new EmbeddedDbSqlRegistry();
+    embeddedDbSqlRegistry.setDataSource(db);
+    
+    return embeddedDbSqlRegistry;
+  }
+  
+  @After
+  public void tearDown(){
+    db.shutdown();
+  }
+  
+}
+```
+
+### XML 설정을 통한 내장형 DB의 생성과 적용
+
+리스트 7-79 EmbeddedDbSqlRegistry 클래스를 이용한 빈등록
+```xml
+<bean id="sqlService" class="springbook.user.sqlservice.OxmSqlService">
+  <property name="unmarshaller" ref="unmarshaller" />
+  <property name="sqlRegistry" ref="sqlRegistry" />
+</bean>
+
+<bean id="sqlRegistry" class="springbook.user.sqlservice.updatable.EmbeddedDbSqlRegistry">
+  <property name="dataSource" ref="embeddedDatabase" />
+</bean>
+```
+
+<jdbc:embedded-database> 태그에 의해 만들어지는 EmbeddedDatabase 타입 빈은 스프링 컨테이너가 종료될때 자동으로 
+shutdown() 메소드가 호출되도록 설정되어 있다. 따라서 내장형 DB를 종료시키기 위한 별도의 코드나 설정은 필요하지 않다. 
