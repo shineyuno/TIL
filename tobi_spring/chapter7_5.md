@@ -145,6 +145,47 @@ public class EmbeddedDbTest {
 embeddedDatabase 아이디를 가진 빈이 등록되며, 빈의 타입은 EmbeddedDatabase다.
 내장형 DB를 시작하고 초기화를 마쳤으니 EmbeddedDatabas 타입 빈 오브젝트를 이용해 내장형 DB를 자유롭게 사용할 수 있다. 
 
+
+리스트 7-72 내장형 DB를 사용하는 SQL레지스트리
+```java
+public class  EmbeddedDbSqlRegistry implements UpdatableSqlRegistry {
+  SimpleJdbcTemplate jdbc;
+  
+  public void setDataSource(DataSource dataSource){
+    jdbc = new SimpleJdbcTemplate(dataSource) // DataSource를 DI받아서 SimpleJdbcTemplate형태로 저장해두고 사용한다.
+  }
+  
+  public void registerSql(String key, String sql){
+    jdbc.update("insert into sqlmap(key_, sql_) values(?,?)", key, sql);
+  }
+  
+  public String findSql(String key) throws SqlNotFoundException {
+    try {
+      return jdbc.queryForObject("select sql_ from sqlmap where key_ = ?", String.class, key);
+    }catch(EmptyResultDataAccessException e) {  // queryForObject()는 쿼리의 결과가 없으면 이 예외를 발생시킨다.
+      throw new SqlNotFoundException(key + "에 해당하는 SQL을 찾을 수 없습니다", e);
+    }
+  }
+  public void updateSql(String key, String sql) throws SqlUpdateFailureException {
+    
+    // update()는 SQL 실행결과로 영향을 받은 레코드의 개수를 리턴한다. 이를 이용하면 주어진 키(key)를 가진
+    // SQL이 존재했는지를 간단히 확인할 수 있다.
+    int affected = jdbc.update("update sqlmap set sql_ = ? where key_= ?, sql,key);
+    if(affected == 0 ) {
+      throw new SqlUpdateFailureException(key + "에 해당하는 SQL을 찾을 수 없습니다.");
+    }
+    
+  }
+  
+  public void updateSql(Map<String,String> sqlmap) throws SqlUpdateFailureException {
+    for(Map.Entry<String, String> entry : sqlmap.entrySet()){
+      updateSql(entry.getKey(), entry.getValue());
+    }
+  } 
+}
+```
+
+
 ### UpdatableSqlRegistry 테스트 코드의 재사용
 리스트 7-73 테스트 코드에서 ConcurrentHashMapSqlRegistry에 의존하는 부분
 ```java
@@ -239,3 +280,54 @@ public class EmbeddedDbSqlRegistryTest extends AbstractUpdatableSqlRegistryTest 
 
 <jdbc:embedded-database> 태그에 의해 만들어지는 EmbeddedDatabase 타입 빈은 스프링 컨테이너가 종료될때 자동으로 
 shutdown() 메소드가 호출되도록 설정되어 있다. 따라서 내장형 DB를 종료시키기 위한 별도의 코드나 설정은 필요하지 않다. 
+
+## 7.5.3 트랜잭션 적용
+
+HashMap과 같은 컬렉션은 트랜잭션 개념을 적용하기 매우 힘들다.
+엘리먼트 하나를 수정하는 정도는 간단한 락킹을 이용해 안전성을 보장해줄 수 있다고 해도, 
+여러 개의 엘리먼트를 트랜잭션과 같은 원자성이 보장된 상태에서 변경하려면 매우 복잡한 과정이 필요하기 때문이다.
+
+내장형 DB를 사용하는 경우에는 트랜잭션의 적용이 상대적으로 쉽다.
+DB자체가 기본적으로 트랜잭션 기반의 작업에 충실하게 설계됐기 때문이다.
+
+스프링에서 트랜잭션을 적용할때 트랜잭션 경계가 DAO 밖에 있고 범위가 넓은 경우라면 AOP를 이용하는 것이 편리하다.
+하지만 SQL 레지스트리라는 제한된 오브젝트내에서 서비스에 특화된 간단한 트랜잭션이 필요한 경우 간단히 트랜잭션 추상화 API를 직접 사용하는게 편리하다.
+
+### 다중 SQL 수정에 대한 트랜잭션 테스트
+
+### 코드를 이용한 트랜잭션 적용
+간결하게 할때는 트랜잭션 적용코드에 템플릿/콜백 패턴을 적용한 TransactionTemplate을 쓰는 편이 낫다.
+
+일반적으로는 트랜잭션 매니저를 싱글톤 빈으로 등록해서 사용하는데, 그 이유는 여러 개의 AOP를 통해 만들어지는 트랜잭션 프록시가 
+같은 트랜잭션 매니저를 공유해야 하기 때문이다.
+
+리스트 7=81 트랜잭션 기능을 가진 EmbeddedDbSqlRegistry
+```java
+public class EmbeddedDbSqlRegistry implements UpdatableSqlRegistry {
+  SimpleJdbcTemplate jdbc;
+  TransactionTemplate transactionTemplate; // jdbcTemplate과 트랜잭션을 동기화해주는 트랜잭션 템플릿이다. 멀티스레드 환경에서 공유가능하다.
+  
+  public void setDataSource(DataSource dataSource){
+    jdbc = new SimpleJdbcTemplate(dataSource);
+    transactionTemplate = new TransactionTemplate(
+      new DataSourceTransactionManager(dataSource)); //dataSource로 TransactionManager를 만들고 이를 이용해 TransactionTemplate을 생성한다.
+    
+  }
+  
+  ...
+  
+  //익명 내부클래스로 만들어지는 콜백 오브젝트 안에서 사용되는 것이라 sqlmap 파라메터는 final로 선언해줘야 한다.
+  public void updateSql(final Map<String, String> sqlmap) throws SqlUpdateFailureException {
+    transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+      protected void doInTransactionWithoutResult(TransactionStatus status){  //트랜잭션 템플릿이 만드는 트랜잭션 경계 안에서 동작
+                                                                              // 할코드를 콜백형태로 만들고 TransactionTemplate의
+                                                                              //execute()메소드에 전달한다.
+        for(Map.Entry<String, String> entry : sqlmap.entrySet()) {
+          updateSql(entry.getKey(), entry.getValue());
+        }
+      }
+    
+    });
+  }
+}
+```
