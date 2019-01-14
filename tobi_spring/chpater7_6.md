@@ -85,3 +85,92 @@ DaoFactory 같은 자바 코드를 대체한 스프링의 XML도 미리 정의�
 
 스프링이 DI의 원리와 다양한 패턴을 빈과 DI 설정정보를 담은 자바 코드와 애노테이션 등에 어떻게 적용했는지도 눈여겨 보자.
 리팩토링을 진행할 때 중요한 것은 테스트를 준비하는 일이다.
+
+## 7.6.1 자바코드를 이용한 빈 설정
+### 테스트 컨텍스트의 변경
+스프링 3.1은 애노테이션과 자바 코드로 만들어진 DI설정정보와 XML을 동시에 사용할수 있는 방법을 제공한다.
+
+리스트 7-82 XML 파일을 사용하는 UserDaoTest
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(location="/test-applicationContext.xml")
+public class UserDaoTest {
+...
+}
+```
+@ContextConfiguration은 스프링 테스트가 테스트용 DI 정보를 어디서 가져와야 하는지 지정할 때 사용하는 애노테이션이다.
+
+DI 설정정보를 담은 클래스는 평범한 자바 클래스에 @Configuration 애노테이션을 달아주면 만들수 있다.
+
+리스트 7-83 DI 메타정보로 사용될 TestApplicationContext클래스
+```java
+@Configuration
+public class TestApplicationContext {
+}
+```
+
+리스트 7-84 TestApplicationContext를 테스트 컨텍스트로 사용하도록 변경한 UserDaoTest
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(calsses=TestApplicationContext.class)
+public class UserDaoTest {
+...
+}
+```
+
+테스트를 성공시키려면 XML에 있던 빈 설정정보를 모두 TestApplicationContext로 옮겨야 한다. 
+그런데 한번에 다 옮기자니 부담스럽다. 이럴때는 TestApplicationContext에 모든 빈 정보를 담는 대신 XML의 도움을 받도록 만드는게 좋겠다.
+
+자바 클래스로 만들어진 DI 설정정보에서 XML의 설정정보를 가져오게 만들수 있다.
+리스트 7-85와 같이 @ImportResource 애노테이션을 이용하면 된다.
+
+리스트 7-85 TestApplicationContext를 테스트 컨텍스트로 사용하도록 변경한 UserDaoTest
+```java
+@Configuration
+@ImportResource("/test-applicationContext.xml")
+public class TestApplicationContext {
+}
+```
+
+### <context:annotation-config />제거
+<context:annotation-config />은 @PostConstruct를 붙인 메소드가 빈이 초기화된후에 자동으로 실행되도록 사용했다.
+<context:annotation-config />에 의해 등록되는 빈 후처리기가 @PostConstruct와 같은 표준 애노테이션을 인식해서 자동으로 메소드를 실행해준다.
+
+TestApplicationContext처럼 @Configuration이 붙은 설정클래스를 사용하는 컨테이너가 사용되면 더이상 <context:annotation-config />을 넣을필요가 없다.
+컨테이너가 직접 @PostConstruct 애노테이션을 처리하는 후처리기를 등록해주기 때문이다.
+
+### <bean>의 전환
+@Bean은 @Configuration이 붙은 DI 설정용 클래스에서 주로 사용되는 것으로, 메소드를 이용해서 빈 오브젝트의 생성과 의존관계 주입을 
+직접 자바코드로 작성할 수 있게 해준다.
+
+리스트 7-87 XML을 이용한 dataSource 빈의 정의
+```xml
+<bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
+ <property name="driverClass" vlaue="com.mysql.jdbc.Driver" />
+ <property name="url" value="jdbc:mysql://localhost/springbook?characterEncoding=UTF-8" />
+ <property name="username" value="spring" />
+ <property name="password" value="book" />
+</bean>  
+```
+
+빈의 의존관계가 인터페이스를 통해 안전하게 맺어지도록 dataSource 빈의 리터 값 타입은 DataSource 인터페이스로 하는것이 좋다.
+
+가장 먼저 할일은 빈 오브젝트를 만드는 것이다.
+@Bean 메소드에서는 빈 인스턴스 생성과 프로퍼티 설정등을 모두 실제 동작하는 코드로 만들 필요가 있다.
+
+리스트 7-88자바 코드로 작성한 dataSource빈
+```java
+import com.mysql.jdbc.Driver;
+
+@Bean
+public DataSource dataSource() {
+  SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
+  
+  dataSource.setDriverClass(Driver.class);
+  dataSource.setUrl("jdbc:mysql://localhost/springbook?characterEncoding=UTF-8");
+  dataSource.setUsername("spring");
+  dataSource.setPassword("book");
+  
+  return dataSource
+}
+```
