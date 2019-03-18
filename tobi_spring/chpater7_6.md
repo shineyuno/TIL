@@ -139,7 +139,7 @@ public class TestApplicationContext {
 TestApplicationContext처럼 @Configuration이 붙은 설정클래스를 사용하는 컨테이너가 사용되면 더이상 <context:annotation-config />을 넣을필요가 없다.
 컨테이너가 직접 @PostConstruct 애노테이션을 처리하는 후처리기를 등록해주기 때문이다.
 
-### <bean>의 전환
+### \<bean\>의 전환
 @Bean은 @Configuration이 붙은 DI 설정용 클래스에서 주로 사용되는 것으로, 메소드를 이용해서 빈 오브젝트의 생성과 의존관계 주입을 
 직접 자바코드로 작성할 수 있게 해준다.
 
@@ -174,3 +174,37 @@ public DataSource dataSource() {
   return dataSource
 }
 ```
+
+스프링의 \<bean\>에 넣는 클래스는 굳이 public이 아니어도 된다.
+내부적으로 리플렉션 API를 이용하기 때문에 private으로 접근을 제한해도 빈의 클래스로 사용할 수 있다.
+반면에 직접 자바 코드에서 참조할 때는 패키지가 다르면 public으로 접근 제한자를 바꿔줘야 한다.
+
+
+자바 코드로 빈을 정의할 때 다른 빈을 프로퍼티에 넣어주려면 빈의 아이디와 같은 이름의 메소드를 호출하면 된다.
+```java
+dao.setSqlService(sqlService());
+```
+XML에 정의된 빈은 sqlService()처럼 같은 메소드를 호출하는 방법으로는 가져올 수가 없다.
+이런 경우엔 클래스에 @Autowired가 붙은 필드를 선언해서 XML에 정의된 빈을 컨테이너가 주입해주게 해야 한다.
+
+@Autowired가 붙은 필드의 타입과 같은 빈이 있으면 해당 빈을 필드에 자동으로 넣어준다.
+
+리스트 7-93 @Autowired를 이용해서 XML 빈을 참조하게 만든 userDao()메소드
+```java
+@Autowired SqlService sqlService;
+
+@Bean
+public UserDao userDao(){
+  UserDaoJdbc dao =  new UserDaoJdbc();
+  dao.setDataSource(dataSource());
+  dao.setSqlService(this.sqlService);
+  return dao;
+}
+```
+
+@Resource는 @Autowired와 유사하게 필드에 빈을 주입 받을때 사용한다.
+차이점은 @Autowired는 필드의 타입을 기준을 빈을 찾고 @Resouce는 필드 이름을 기준으로 한다.
+
+XML에서 사용한\<jdbc:embedded-database\> 전용 태그는 DataSource 타입의 빈을 생성한다.
+그런데 이미 TestApplicationContext에 DataSource타입의 dataSource 빈이 존재하므로 타입을 기준으로 주입받게 만들면 혼란이 발생할수 있다.
+그래서 필드 이름과 일치하는 빈 아이디를 가진 빈을 주입받을때 사용하는 @Resource를 이용했다.
