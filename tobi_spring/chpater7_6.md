@@ -262,7 +262,7 @@ XML에서 사용한\<jdbc:embedded-database\> 전용 태그는 DataSource 타입
  스프링은 @AutoWired가 붙은 수정자 메소드가 있으면 파라미터 타입을 보고 주입가능한 타입의 빈을 모두 찾는다.
  
  리스트 7-101 sqlService 필드에 @Autowired 적용
-```
+```java
  public class UserDaoJdbc implements UserDao {
   
   @Autowired
