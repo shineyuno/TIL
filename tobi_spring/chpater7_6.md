@@ -208,3 +208,77 @@ public UserDao userDao(){
 XML에서 사용한\<jdbc:embedded-database\> 전용 태그는 DataSource 타입의 빈을 생성한다.
 그런데 이미 TestApplicationContext에 DataSource타입의 dataSource 빈이 존재하므로 타입을 기준으로 주입받게 만들면 혼란이 발생할수 있다.
 그래서 필드 이름과 일치하는 빈 아이디를 가진 빈을 주입받을때 사용하는 @Resource를 이용했다.
+
+### 전용태그 
+ 전용 태그도 \<bean\>과 마찬가지로 빈을 등록하는 데 사용된다. 
+ 그런데 내부에서 실제로 어떤빈이 만들어지는지 파악하기가 쉽지 않다.
+ 전용태그 하나에 여러 개의 빈이 만들어질 수도 있다.
+ 
+ #### \<tx:annotation-driven /\> 
+ @Transactional을 이용한 트랜잭션 AOP기능을 지원하는 \<tx:annotation-driven /\>  전용태그 </br>
+ 트랜잭션 AOP를 적용하려면 제법 복잡하고 많은 빈이 동원돼야한다. </br>
+ AOP를 위해 기본적으로 어드바이스와 포인트컷이 필요하고, 애노테이션 정보에서 트랜잭션속성을 가져와서 어드바이스에서 사용하게 
+ 해주는 기능도 필요하다.
+ 
+ \<tx:annotation-driven /\>  은 옵션을 주지 않는다면 기본적으로 다음 네가지 클래스를 빈으로 등록해준다.
+ ```java
+ org.springframework.aop.framework.autoporxy.InfrastructureAdvisorAutoProxyCreator
+ org.springframework.transaction.annotation.AnnotationTransactionAttributeSource
+ org.springframework.transaction.interceptor.TransactionInterceptor
+ org.springframework.transaction.interceptor.BeanFactoryTransactionAttributeSourceAdvisor
+ ```
+ 
+ XML에서는 용도가 잘 설명되는 전용태그로 정의돼서 손쉽게 사용했는데 자바코드에서는 복잡한 로우 레벨의 클래스를 여러개나 사용해서 빈을 정의해야
+ 한다면 부담스럽다.
+ 
+ 스프링 3.1에서는 \<tx:annotation-driven /\> 과 같이 특별한 목적을 위해 만들어진, 내부적으로 복잡한 로우 레벨의 빈을 
+ 등록해주는 전용태그에 대응되는 애노테이션을 제공
+ 
+ 스프링 3.1은 XML에서 자주 사용되는 전용 태그를 @Enable로 시작하는 애노테이션으로 대체할 수 있게 다양한 애노테이션을 제공한다.
+ 가장 대표적으로 사용되는것이 \<tx:annotation-driven /\>를 대체할수있는 **@EnableTransactionManagement** 다
+ 
+ ## 7.6.2 빈 스캐닝과 자동와이어링
+ ### @Autowired를 이용한 자동와이어링
+ 빈의 프로퍼티에 다른 빈을 넣어서 런타임 관계를 맺어주려면 <bean>의 <property>를 사용해 빈을 정의하거나 
+ 자바코드로 직접 수정자 메소드를 호출해줘야했다.
+  
+ @Autowired는 자동와이어링 기법을 이용해서 조건에 맞는 빈을 찾아 자동으로 **수정자 메소드** 나 **필드** 에 넣어준다. 
+ 
+ 자동 와이어링을 이용하면 컨테이너가 이름이나 타입을 기준으로 주입될 빈을 찾아주기 때문에 빈의 프로퍼티 설정을 직접해주는
+ 자바코드나 XML의 양을 대폭 줄일 수 있다. 컨테이너가 자동으로 주입할 빈을 결정하기 어려운 경우도 있다.
+ 이럴땐 직접 프로퍼티에 주입할 대상을 지정하는 방법을 병행하면 된다.
+ 
+ 리스트 7-100 dataSource 수정자에 @Autowired 적용
+ ```java
+ public class UserDaoJdbc implements UserDao {
+  
+  @Autowired
+  public void setDataSource(DataSource dataSource) {
+    this.jdbcTemplate = new JdbcTemplate(dataSource);
+  }
+  ...
+ }
+ ```
+ 스프링은 @AutoWired가 붙은 수정자 메소드가 있으면 파라미터 타입을 보고 주입가능한 타입의 빈을 모두 찾는다.
+ 
+ 리스트 7-101 sqlService 필드에 @Autowired 적용
+```
+ public class UserDaoJdbc implements UserDao {
+  
+  @Autowired
+  private SqlService sqlService;
+  
+  public void setSqlService(SqlService sqlService) {
+    this.sqlService = sqlSerivce;
+  }
+ }
+```
+ 필드에 직접 값을 넣을 수 있다면 수정자 메소드는 없어도 된다. 리스트 7-101의 setSqlService()는 메소드는 생략해도 좋다.
+ 
+ 반면에 리스트 7-100의 setDataSource() 수정자 메소드를 없애고 필드에 @Autowired를 적용하는 건 불가능하다. 왜냐하면 setDataSource() 
+ 메소드는 여타 수정자 메소드처럼 주어진 오브젝트를 그대로 필드에 저장하는 대신 JdbcTemplate을 생성해서 저장해주기 때문이다.
+ 
+ 
+ 스프링과 무관하게 직접 오브젝트를 생성하고 다른 오브젝트를 주입해서 테스트하는 순수한 단위 테스트를 만드는 경우에는 수정자 메소드가 필요하다.
+ 예를 들어 UserSerivceTest의 upgradeLevels() 테스트 메소드는 목 오브젝트를 만들어서 UserSerivceImpl의 프로퍼티 필드에 @Autowired를
+ 적용했다고 수정자 메소드를 제거하면 곤란해진다.
