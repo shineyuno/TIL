@@ -282,3 +282,74 @@ XML에서 사용한\<jdbc:embedded-database\> 전용 태그는 DataSource 타입
  스프링과 무관하게 직접 오브젝트를 생성하고 다른 오브젝트를 주입해서 테스트하는 순수한 단위 테스트를 만드는 경우에는 수정자 메소드가 필요하다.
  예를 들어 UserSerivceTest의 upgradeLevels() 테스트 메소드는 목 오브젝트를 만들어서 UserSerivceImpl의 프로퍼티 필드에 @Autowired를
  적용했다고 수정자 메소드를 제거하면 곤란해진다.
+
+### @Componet를 이용한 자동 빈 등록
+@Component 또는 @Component를 메타 애노테이션으로 갖고 있는 애노테이션이 붙은 클래스가 자동 빈 등록 대상이 된다.
+
+@Component는 빈으로 등록될 후보 클래스에 붙여주는 일종의 마커(marker)라고 보면된다.
+
+리스트 7-104 @Component적용
+```java
+@Component
+public class UserDaoJdbc implements UserDao {
+```
++ @Component 애노테이션이 달린 클래스를 자동으로 찾아서 빈을 등록해주게 하려면 빈 스캔 기능을 사용하겠다는 애노테이션 정의가 필요.
++ 빈 자동등록이 컨테이너가 디폴트로 제공하는 기능은 아님.
++ 프로젝트 내의 모든 클래스패스를 다 뒤져서 @Component 애노테이션이 달린 클래스를 찾는 것은 부담이 많이 가는 작업이다.
++ 특정 패키지 아래서만 찾도록 기준이 되는 패키지를 지정해줄 필요가 있다.
++ 이때 사용되는 애노테이션은 @ComponentScan이다.
+
+리스트 7-105 @ComponentScan 적용
+```java
+@Configuration
+@EnableTransactionManagement
+@ComponetScan(basePackages="springbook.user")
+public class TestApplicationContext {
+```
++ **@Component**의 basePackages 엘리먼트는 @Component가 붙은 클래스를 스캔할 기준 패키지를 지정할때 사용 
++ 기준 패키지는 여러개 넣어도 된다.
++ 지정한 패키지 아래의 모든 서브패키지를 다 검색
+
+@Componentr가 붙은 클래스이고, 빈의 아이디는 따로 지정하지 않았으면 클래스 이름의 첫 글자를 소문자로 바꿔서 사용한다.
+
+자동 빈 등록을 이용하는 경우 빈의 의존관계를 담은 프로퍼티를 따로 지정할 방법이 없다.
+그래서 프로퍼티 설정에 @Autowired와 같은 자동와이어링 방식을 적용해야 한다.
+
+@Component가 붙은 클래스의 이름 대신 다른 이름을 빈의 아이디로 사용하고 싶다면 다음과 같이 애노테이션에 이름을 넣어주면된다.
+```java
+@Component("userDao")
+```
+
+애노테이션은 @interface 키워드를 이용해 정의한다.
+@Component 애노테이션은 다음과 같이 정의되어 있다.
+```java
+public @interface Componet {
+...
+}
+```
+애노테이션은 상속을 할수 없고, 인터페이스를 구현할 수도 없다.
+여러 개의 애노테이션에 공통적인 속성을 부여하려면 메타 애노테이션을 이용한다.
+
+#### 메타 애노테이션
+메타애노테이션은 애노테이션의 정의에 부여된 애노테이션을 말한다.
+
+애노테이션을 정의할 때 메타 애노테이션으로 @Component를 부여해주면 클래스마다 @Component를 따로 붙여주지 않아도 자동 빈 등록 
+대상으로 만들 수 있다.
+
+리스트 7-106 @Component메타 애노테이션을 가진 애노테이션 정의
+```java
+@Component
+public @interface SnsConnector {
+...
+}
+```
+
+#### @Repository 
+스프링은 DAO 빈을 자동등록 대상으로 만들때 사용할 수 있게 @Repository 애노테이션을 제공한다.
+@Component를 부여하는 것만으로도 등록 대상으로 만드는 데 충분하지만 스프링은 DAO 기능을 제공하는 클래스에는 @Repository
+애노테이션을 이용하도록 권장한다. @Repository는 @Component를 메타 애노테이션으로 갖고 있다.
+
+
+#### @Service
+@Service도 @Repository처럼 스프링이 제공하는 빈 자동등록용 애노테이션인데, 이 애노테이션은 비즈니스 로직을 담고 있는
+서비스 계층의 빈을 구분하기 위해 사용된다. 서비스 계층은 트랜잭션 경계가 되는 곳이라 @Transactional이 함꼐 사용되는 경우가 많다.
