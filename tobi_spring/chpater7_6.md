@@ -353,3 +353,39 @@ public @interface SnsConnector {
 #### @Service
 @Service도 @Repository처럼 스프링이 제공하는 빈 자동등록용 애노테이션인데, 이 애노테이션은 비즈니스 로직을 담고 있는
 서비스 계층의 빈을 구분하기 위해 사용된다. 서비스 계층은 트랜잭션 경계가 되는 곳이라 @Transactional이 함꼐 사용되는 경우가 많다.
+
+## 7.6.3 컨텍스트 분리와 @Import
+
+### 테스트용 컨텍스트 분리
+TestApplicationContext 클래스의 이름을 AppContext라고 바꾸자.
+테스트 정보를 분리하고 남은 애플리케이션의 핵심 DI 정보를 남겨둘 클래스이므로 이름에서 Test를 빼는게 좋겠다.
+문제는 Test를 빼고 나면 이름이 ApplicationContext가 돼서 스프링 컨테이너의 핵심 인터페이스인 ApplicationContext와 
+혼동된다는 점으로, **자주 쓰는 인터페이스와 이름이 겹치는 건 별로 좋지 않다.** 그래서 앞부분을 줄여서 AppContext로 바꾸겠다. 
+
+테스트용으로 특별히 만든 빈은 설정정보에 내용이 드러나 있는 편이 좋다.
+
+하나 이상의 설정 클래스가 스프링 테스트에서 사용되게 하려면 리스트 7-111과 같이 classes에 적용할 설정 클래스를 모두 나열해주면 된다.
+
+리스트 7-111 테스트 컨텍스트의 DI 설정 클래스 정보 수정
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes={TestAppContext.class, AppContext.class})
+public class UserDaoTest {
+```
+
+### @Import
++ 테스트용 설정정보는 애플리케이션 핵심 설정정보와 깔끔하게 분리되는 편이 낫다.
++ 반면에 SQL서비스와 관련된 빈 설정은 별도 클래스로 분리하더라도 애플리케이션이 동작할때 항상 필요한 정보다.
++ 그래서 파일을 구분했더라도 애플리케이션 설정정보의 중심이되는 AppContext와 긴밀하게 연결해주는 게 좋다. 
+
+AppContext가 메인 설정정보가 되고, SqlServiceContext는 AppContext에 포함되는 보조 설정정보로 사용
+자바 클래스로 된 설정정보를 가져올 때는 @ImportResource 대신 @Import를 이용한다.
+
+리스트 7-113 @Import 적용
+```java
+@Configuration
+@EnableTransactionManagement
+@ComponentScan(basePackages="springbook.user")
+@Import(SqlServiceContext.class)
+public class AppContext {
+```
