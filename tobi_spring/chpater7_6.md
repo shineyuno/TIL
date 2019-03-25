@@ -389,3 +389,119 @@ AppContext가 메인 설정정보가 되고, SqlServiceContext는 AppContext에 
 @Import(SqlServiceContext.class)
 public class AppContext {
 ```
+
+## 7.6.4 프로파일
+같은 타입이면서 아이디도 같은 두개의 빈이 있으면 스프링이 빈 정보를 읽는 순서에 따라 뒤의 빈 설정이 앞에서 발견된 빈 설정에 우선해서 적용된다.
+
+테스트 환경과 운녕환경에서 각기 다른 빈 정의가 필요한 경우가 종종 있다.
+
+mailSender 빈처럼 양쪽 모두 필요하면서 빈의 내용이 달라져야 하는 경우에는 빈 설정정보 작성이 곤란해진다.
+mailSender 빈은 @Autowired를 이용한 자동 와이어링 방식으로 주입되기 때문에 빈 아이디를 다르게 설정하는 것으로 간단히 해결 할수도 없다.
+
+리스트 7-115 운영환경에서만 필요한 빈을 담은 빈 설정 클래스
+```java
+@Configuration
+public class ProductionAppContext {
+  @Bean
+  public MailSender mailSender() {
+    JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
+    mailSender.setHost("localhost");
+    return mailSender;
+  }
+}
+```
+
+### @Profile과 @ActivePrfiles
+스프링 3.1은 환경에 따라서 빈 설정정보가 달라져야 하는 경우에는 파일을 여러 개로 쪼개고 조합하는 등의 번거로운 방법 대신 간단히
+설정정보를 구성할 수 있는 방법을 제공한다.
+실행환경에 따라 빈 구성이 달라지는 내용을 프로파일로 정의해서 만들어두고, 실행시점에 어떤 프로파일의 빈 설정을 사용할지 지정한는 것이다.
+
+프로파일은 간단한 이름과 빈설정으로 구성된다.
+특정실행환경에만 적용돼야 하는 빈설정은 이미 독립된 클래스로 깔끔히 구분해뒀다.
+다만, 명시적으로 파일을 매번 조합해야하는 번거로움이 있다.
+
+프로파일을 적용하면 하나의 설정 클래스만 가지고 환경에 따라 다른 빈 설정 조합을 만들어낼 수있다.
+
+프로파일은 설정 클래스 단위로 지정한다. 리스트 7-116과 같이 @Profile 애노테이션을 클래스 레벨에 부여하고 프로파일 이름을 넣어주면된다.
+
+리스트 7-116 @Profile을 지정한 TestAppContext
+```java
+@Configuration
+@Profile("test")
+public class TestAppContext {
+```
+
+리스트 7-117 @Import에 모든 설정 클래스 추가
+```java
+@Configuration
+@EnableTransactionManagement
+@ComponentScan(basePackage="springbook.user")
+@Import({SqlServiceContext.class, TestAppContext.class, ProductionAppContext.class})
+public class AppContext {
+```
+
+@Profile이 붙은 설정클래스는 @Import로 가져오든 @ContextConfiguration에 직접 명시하든 상관없이 현재 컨테이너의
+활성(active) 프로파일 목록에 자신의 프로파일 이름이 들어 있지 않으면 무시된다.
+
+**활성 프로파일**이란 스프링 컨테이너를 실행할때 추가로 지정해주는 속성
+
+프로파일을 지정하려면 @ActiveProfile 애노테이션을 사용하면 된다.
+
+리스트 7-118 활성프로파일을 지정한 UserServiceTest
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ActiveProfiles("test")
+@ContextConfiguration(classes=AppContext.class)
+public class UserSerivceTest {
+```
+프로파일이 일종의 필터처럼 적용된다고 이해해도 좋다.
+
+### 컨테이너의 빈 등록 정보 확인
+스프링 컨테이너는 모두 BeanFactory라는 인터페이스를 구현하고 있다.
+
+BeanFactory의 구현 클래스 중에 DefaultListableBeanFactory가 있는데 거의 대부분의 스프링 컨테이너는
+이 클래스를 이용해 빈을 등록하고 관리한다.
+
+리스트 7-119 등록된 빈 내역을 조회하는 테스트 메소드
+```java
+@Autowired DefaultListablesBeanFactory bf;
+
+@Test
+public void beans(){
+  for(String n : bf.getBeanDefinitionNames()) {
+    System.out.println(n + " \t " + bf.getBean(n).getClass().getName()); 
+  }
+}
+```
+
+### 중첩 클래스를 이용한 프로파일 적용
+
+리스트 7-120 TestAppContext와 ProductionAppContext를 중첩 클래스로 만든 AppContext
+```java
+@Configuration
+@EnableTransactionManagement
+@ComponentScan(basePackage="springbook.user")
+@Import({SqlServiceContext.class, AppContext.TestAppContext.class, AppContext.ProductionAppContext.class})
+public class AppContext {
+
+...
+
+@Configuration
+@Profile("production")
+public static class ProductionAppContext {
+...
+}
+
+@Configuration
+@Profile("test")
+public static class TestAppContext {
+...
+}
+
+```
+
+다음과 같이 @Import에 지정했던 두개의 프로파일 설정 클래스를 아예 제거해도 된다.
+```java
+@Import(SqlServiceContext.class)
+```
+스태틱 중첩 클래스로 넣은 @Configuration 클래스는 스프링이 자동으로 포함해주기 때문이다.
