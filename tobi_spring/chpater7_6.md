@@ -505,3 +505,116 @@ public static class TestAppContext {
 @Import(SqlServiceContext.class)
 ```
 스태틱 중첩 클래스로 넣은 @Configuration 클래스는 스프링이 자동으로 포함해주기 때문이다.
+
+## 7.6.5 프로퍼티 소스
+DB 드라이버 클래스나, 접속 URL, 로그인 계정 정보 등은 개발환경이나 테스트환경, 운영환경에 따라 달라진다.
+
+외부 서비스 연결에 필요한 정보는 자바 클래스에서 제거하고 손쉽게 편집할수 있고 빌드 작업이 따로 필요 없는 XML이나 프로퍼티 파일 같은
+텍스트 파일에 저장해두는 편이 낫다.
+
+### @PropertySource
+프로퍼티에 들어갈 DB 연결정보는 텍스트로 된 이름과 값의 쌍으로 구성되면 된다.
+복잡한 XML을 정의해서 사용할 것 없이 간단히 자바의 프로퍼티 파일 포멧을 이용하면 충분하다.
+
+프로퍼티 파일의 확장자는 보통 properties이고, 내부에 키=값 형태로 프로퍼티를 정의한다.
+
+다른 종류의 서비스 정보를 추가하면 비슷한 이름의 프로퍼티가 있어서 혼동될 위험이 있으니 앞에 'db.'을 붙여서 구분하자
+
+리스트7-122 database.properties 파일
+```java
+db.driverClass=com.mysql.jdbc.Driver
+db.url=jdbc:mysql://localhost/springbook?characterEncoding=UTF-8
+db.username=spring
+db.password=book
+```
+
+스프링 3.1은 빈 설정 작업에 필요한 프로퍼티 정보를 컨테이너가 관리하고 제공해준다.
+스프링 컨테이너가 지정된 정보 소스로부터 프로퍼티 값을 수집하고, 이를 빈 설정 작업중에 사용할 수 있게 해준다.
+컨테이너가 프로퍼티 값을 가져오는 대상을 프로퍼티 소소(property source)라고 한다.
+환경 변수나 시스템 프로퍼티처럼 디폴트로 프로퍼티 정보를 끌어오는 프로퍼티 소소도 있고, 프로퍼티 파일이나 리소스의 위치를
+지정해서 사용되는 프로퍼티 소스도 있다.
+
+DB 연결정보는 database.properties라는 특정 파일에서 프로퍼티 값을 가져와야 하므로 프로퍼티 소스를 등록해줘야 한다.
+프로퍼티 등록에는 @PropertySource 애노테이션을 이용한다.
+
+리스트 7-123 @PropertySource 적용
+```java
+@Configuration
+@EnableTransactionManagement
+@ComponentScan(basePackage="springbook.user")
+@Import(SqlServiceContext.class)
+@PropertySource("/database.properties")
+public class AppContext {
+```
+
+@PropertySource로 등록한 리소스로부터 가져오는 프로퍼티 값은 컨테이너가 관리하는 Environment 타입의 환경 오브젝트에 저장된다.
+환경오브젝트는 빈처럼 @Autowired를 통해 필드로 주입받을 수 있다. 
+주입받은 Environment 오브젝트의 getProperty() 메소드를 이용하면 프로퍼티 값을 가져올 수 있다.
+
+리스트 7-124 환경 오브젝트로부터 프로퍼티 값을 가져오도록 수정한 dataSource() 메소드
+```java
+@Autowired Environment env;
+
+@Bean
+public DataSource datasource() {
+  SimpleDriverDataSource ds = new SimpleDriverDataSource();
+  
+  try {
+    ds.setDriverClass((Class<? extends java.sql.Driver>)Class.forName(env.getProperty("db.driverClass")));
+  } catch(ClassNotFoundException e) {
+    throw new RuntimeException(e);
+  }
+  
+  ds.setUrl(env.getProperty("db.url"));
+  ds.setUsername(env.getProperty("db.username"));
+  ds.setPassword(env.getProperty("db.password"));
+  
+  return ds;
+}
+```
+
+Environment 오브젝트의 getProperty() 메소드는 프로퍼티 이름을 파라미터로 받아 스트링 타입의 프로퍼티 값을 돌려준다.
+
+### PropertySourcePlaceholderConfigurer
+Environment 오브젝트 대신 프로퍼티 값을 직접 DI 받는 방법도 가능하다.
+
+@Value는 이름 그대로 값을 주입받을 때 사용한다. 
+@Value의 사용 방법은 여러가지가 있는데, 여기서는 프로퍼티 소스로부터 값을 주입받을 수 있게 치환자(placeholder)를 이용해 보겠다.
+
+@Value에는 프로퍼티 이름을 ${}안에 넣은 문자열을 디폴트 엘리먼트 값으로 지정해준다.
+
+리스트 7-125 @Value를 이용한 프로퍼티 값 주입
+```java
+@PropertySource("/database.properties")
+public class AppContext {
+  @Value("${db.driverClass}") Class<? extends Driver> driverClass;
+  @Value("${db.url}") String url;
+  @Value("${db.username}") String username;
+  @Value("${db.password}") String password;
+```
+XML에서는 다음과 같이 프로퍼티 값에 문자열로 된 치환자를 넣어두면, 컨테이너가 프로퍼티 파일 등에서 가져온 실제 값으로 
+바꿔치게 만들 수 있다.
+```xml
+  <property name="driverClass" value="${db.driverClass}" /> 
+```
+
+리스트 7-127 @Value 필드를 사용하도록 수정한 dataSource() 메소드
+```java
+@Bean
+public DataSource datasource() {
+  SimpleDriverDataSource ds = new SimpleDriverDataSource();
+ 
+  ds.setDriverClass(this.driverClass);
+  ds.setUrl(this.url);
+  ds.setUsername(this.username);
+  ds.setPassword(thispassword);
+  
+  return ds;
+}
+```
+
+@Value를 이용하면 driverClass처럼 문자열을 그대로 사용하지 않고 타입 변환이 필요한 프로퍼티를 스프링이 알아서 처리해준다는 장점이 있다.
+지저분한 리플렉션 API나 try/catch가 없어서 깔끔하다.
+
+Environment를 이용해 프로퍼티 값을 가져오는 방법과 @Value를 이용하는 방법중에서 작성하기 편하고 코드를 이해하기 쉽다고 생각되는
+방법을 선택하면 되겠다.
