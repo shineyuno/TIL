@@ -62,3 +62,6 @@ Swift Generator 는 Thrift IDL 파일의 Swift 코덱에서 사용할 수있는 
 
 # Swift Maven plugin
 Swift Maven 플러그인을 사용하면 Maven 빌드의 코드 생성기를 사용하여 즉시 소스 코드를 생성 할 수 있습니다.
+
+# 참고
+https://github.com/facebookarchive/swift
