@@ -618,3 +618,98 @@ public DataSource datasource() {
 
 Environment를 이용해 프로퍼티 값을 가져오는 방법과 @Value를 이용하는 방법중에서 작성하기 편하고 코드를 이해하기 쉽다고 생각되는
 방법을 선택하면 되겠다.
+
+## 7.6.6 빈 설정의 재사용과 @Enable*
+
+### 빈 설정자
+리스트 7-130 SqlMapConfig 인터페이스
+```java
+import org.springframework.core.io.Resource;
+
+public interface SqlMapConfig {
+  Resource getSqlMapResource();
+}
+```
+
+리스트 7-131 SqlMapConfig 인터페이스를 구현한 클래스
+```java
+public class UserSqlMapConfig implements SqlMapConfig {
+  @Override
+  public Resource getSqlMapResource() {
+    return new ClassPathResource("sqlmap.xml", UserDao.class);
+  }
+}
+```
+빈으로 정의시 런타임 시 주입되게 만들수 있다.
+
+리스트 7-132 SqlMapConfig 타입 빈에 의존하게 만든 SqlServiceContext
+```java
+@Configuration
+public class SqlServiceContext {
+  @Autowired SqlMapConfig sqlMapConfig;
+  
+  @Bean
+  public SqlService sqlService(){
+    OxmSqlService sqlService = new OxmSqlService();
+    sqlService.setUnmarshaller(unmarshaller());
+    sqlService.setSqlRegisttry(sqlRegistry());
+    
+    //sqlMapConfig 이용
+    sqlService.setSqlmap(this.sqlMapConfig.getSqlMapResource());
+    
+    return sqlService;
+  }
+}
+```
+
+리스트 7-133 sqlMapCofig 빈설정
+```java
+public class AppContext {
+...
+  @Bean
+  public SqlMapConfig sqlMapConfig() {
+    return new UserSqlMapConfig();
+  }  
+```
+SQL 서비스 기능을 사용하려는 애플리케이션은 SqlMapConfig을 구현한 빈을 만들어 원하는 리소스로부터 SQL 매핑정보를 가져오게 만들수 있다.
+
+설정정보를 담은 코드도 리팩토링하면 반복적으로 사용되는 부분은 수정없이 재사용될 수 있고, 적용환경에 따라 바뀌는 부분은 인터페이스로
+분리하고 DI를 통해 외부에서 주입되게 만들 수 있다.
+
+@Configuration은 다음과 같이 @Component를 메타 애노테이션으로 갖고 있는 자동 빈 등록용 애노테이션이기도 하다.
+
+빈을 DI 받아서 사용하는 쪽은 빈이 특정 인터페이스를 구현하고 있는지에만 관심이 있다.
+
+리스트 7-134 SqlMapConfig을 구현하게만든 AppContext
+```java
+public class AppContext implements SqlMapConfig {
+  ...
+  
+  @Overide
+  public Resource getSqlMapResource() {
+    return new ClassPathResource("sqlmap.xml", UserDao.class);
+  }
+```
+
+### @Enable* 애노테이션 
+ @Component는 빈 자동등록 대상을 지정할 때 사용하는 애노테이션인데, 많은 경우 @Component를 직접 사용하기보다는
+ @Repository나 @Service처럼 좀 더 의미 있는 이름의 애노테이션을 만들어 사용한다.
+ @Component를 메타 애노테이션으로 넣어서 애노테이션을 정의해주면 @Component와 동일한 빈 등록기능이 적용되면서 자동등록되는
+ 빈의 종류나 계층이 무엇인지 나타낼 수도 있고, AOP를 이용해 특정 애노테이션이 달린빈만 선정해 부가 기능을 제공하게 만들수도 있다.
+ 
+ @Import도 다른 이름의 애노테이션으로 대체 가능하다. @Import애노테이션과 빈 설정 클래스 값을 메타 애노테이션으로 넣어서 
+ 리스트 7-135와 같이 애노테이션을 만들어 주면 된다.
+ 
+ 리스트 7-135 @Import를 메타 애노테이션으로 넣은 애노테이션 정의
+ ```java
+ @Import(value=SqlServiceContext.class)
+ public @interface EnableSqlService {
+ }
+ ```
+ 
+ @Import를 메타 애노테이션으로 부여해서 사용하는 방법은 이 밖에도 여러 가지 장점이 있다.
+ 애노테이션을 정의하면서 엘리먼트를 넣어서 옵션을 지정하게 할 수도 있다.
+ SqlMapConfig 인터페이스를 통해 SqlServiceContext에 SQL 매핑파일을 전달하게 했던 방식을 다음과 같이 간결하게 만들 수도 있다.
+ ```java
+ @EnableSqlService("classpath:/springbook/user/sqlmap.xml")
+ ```
