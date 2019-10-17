@@ -31,7 +31,7 @@ DIP를 논할때 운영체제나 플랫폼 같이 안정성이 보장된 환경�
 
 그림 11.1에서 추상 팩토리를 사용한 구조를 볼 수 있다.
 
-<img src="clean_architecture/images/IMG_0005.jpg" width="50%">
+<img src="images/IMG_0005.jpg" width="50%">
 
 그림 11.1의 곡선은 아키텍처 경계를 뜻한다.
 이곡선은 구체적인 것들로부터 추상적인 것들을 구분한다.
