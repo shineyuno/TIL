@@ -52,3 +52,6 @@ TimeBasedRollingPolicy는 아마도 가장 널리 사용되는 롤링 정책 일
 | /logs/example.%d{yyyy-MM-dd_HH}.log | Hourly rollover   | 롤오버 된 파일은 다음과 같습니다. example.2015-05-17_09.log, example.2015-05-17_10.log                                                                                                         |
 | /logs/%d{yyyy/MM}/example.log       | Monthly rollover  | 날짜 및 시간 패턴은 디렉토리 이름에 있습니다. 현재 로그 파일 경로는 "logs / example.log"입니다. 롤오버 된 파일의 디렉토리는“logs / 2015 / 04 / example.log”,“logs / 2015 / 03 / example.log”,… |
 | /logs/example.%d{yyyy-ww}.zip       | Weekly rollover   | 파일 패턴은 "zip"으로 끝납니다. 따라서 롤오버 된 파일이 압축됩니다. fileNamePattern 옵션의 값이 .gz 또는 .zip으로 끝나는 경우 로그 백은 자동 파일 압축을 적용합니다.                           |
+
+## 참고
+https://examples.javacodegeeks.com/enterprise-java/logback/logback-rollingfileappender-example/
